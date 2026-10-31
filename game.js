@@ -638,12 +638,12 @@ async function runGame() {
   await say('밤비', '장난꾸러기들이 트리 장식이랑\n초대장을 훔쳐 갔어!');
   await say('밤비', '같이 찾아줄래?\n나 먼저 가 있을게!');
   bambi.guide = true; bambi.left = false;
-  hint('화면을 <b>꾹</b> 누르고 있으면 걸어가요');
+  hint('<b>HOLD</b> to walk');
   for (let i = 0; i < 3; i++) {
-    if (i === 2) { await walkUntil(SOL_X); S.holding = false; hideHint(); await solVoice(); hint('<b>꾹</b> 눌러서 계속 가요'); }
+    if (i === 2) { await walkUntil(SOL_X); S.holding = false; hideHint(); await solVoice(); hint('<b>HOLD</b> to keep going'); }
     await walkUntil(EV[i].x - 40); S.holding = false; hideHint();
     await encounter(i);
-    hint('<b>꾹</b> 눌러서 계속 가요');
+    hint('<b>HOLD</b> to keep going');
   }
   await walkUntil(END_X); S.holding = false; hideHint();
   await ending();
@@ -661,7 +661,7 @@ async function encounter(i) {
   e.hpShow = 99;
   await say(e.name, e.line);
   S.mode = 'battle'; e.state = 'battle';
-  hint(i === 0 ? '화면을 <b>톡톡</b> 눌러서 공격!' : '<b>톡톡톡!</b>');
+  hint(i === 0 ? '<b>TAP TAP</b> to attack!' : '<b>TAP TAP TAP!</b>');
   const iv = setInterval(() => { if (e.hp < e.max) { hideHint(); clearInterval(iv); } }, 100);
   await new Promise(r => { e.res = r; });
   clearInterval(iv); hideHint();
@@ -695,7 +695,7 @@ async function pieceGet(i, x, y) {
 function showPiece(i) {
   return new Promise(res => {
     const m = $('#piece'), pc = CONFIG.pieces[i];
-    $('#pn').textContent = ['첫 번째', '두 번째', '마지막'][i]; $('#pl').textContent = pc.label; $('#px').textContent = pc.text;
+    $('#pn').textContent = i + 1; $('#pl').textContent = pc.label; $('#px').textContent = pc.text;
     $('#pslots').innerHTML = [0, 1, 2].map(k => `<img src="${iconURL(k <= i ? ENVELOPE : ENVELOPE_EMPTY, 4)}" class="${k === i ? 'new' : ''}">`).join('');
     m.classList.remove('hide'); const pp = m.querySelector('.letter'); pp.classList.remove('pop'); void pp.offsetWidth; pp.classList.add('pop');
     $('#pOk').onclick = e => { e.stopPropagation(); m.classList.add('hide'); res(); };
@@ -718,7 +718,7 @@ async function ending() {
   sol.cheer = true; await say('솔', '호호호! 자, 마지막 장식은\n네가 달아줘!'); sol.cheer = false;
   item = { sp: STAR, x: player.x, y: GY - 42, t: 0, visible: true };
   player.cheer = true; flareP(item.x, item.y, 12, 0.4); burstTwinkle(item.x, item.y, 10, 40, ['#ffd76a', '#fff']);
-  hint('화면을 <b>톡!</b> 눌러서 별을 달아 줘'); S.mode = 'tap';
+  hint('<b>TAP</b> to place the star'); S.mode = 'tap';
   await waitTap();
   hideHint(); S.mode = 'cutscene'; player.cheer = false;
   const topY = GY + 3 + BIG.tree.top - 4;
@@ -775,8 +775,8 @@ $('#bMap').addEventListener('click', () => window.open(CONFIG.mapUrl, '_blank'))
 $('#bRsvp').addEventListener('click', () => window.open(CONFIG.rsvpUrl, '_blank'));
 $('#bCopy').addEventListener('click', async () => {
   const t = CONFIG.address;
-  try { await navigator.clipboard.writeText(t); toast('주소를 복사했어요!'); }
-  catch (e) { const ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); toast('주소를 복사했어요!'); } catch (_) { toast(t); } ta.remove(); }
+  try { await navigator.clipboard.writeText(t); toast('ADDRESS COPIED!'); }
+  catch (e) { const ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); toast('ADDRESS COPIED!'); } catch (_) { toast(t); } ta.remove(); }
 });
 $('#bAgain').addEventListener('click', () => location.reload());
 

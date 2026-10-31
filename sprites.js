@@ -227,13 +227,13 @@ const TOP_PAD = { elf: 6 };
 
 /* ---------- 팔레트 ---------- */
 const SKINS = [['#ffdcc5', '#f2b49a'], ['#e2a87e', '#c3845e'], ['#a8e2a2', '#76ba7c'], ['#aad6ff', '#7aa8e8']];
-const SKIN_NAMES = ['살색', '진한 살색', '초록색', '파란색'];
+const SKIN_NAMES = ['PEACH', 'TAN', 'GREEN', 'BLUE'];
 const HAIR_COL = { h: '#80492f', H: '#52291f', L: '#c1825a' };
 const OUTFITS = {
-  santa:   { U: '#ff6e78', o: '#e0414f', O: '#a8263c', x: '#8a1c34', P: '#fbf6ec', m: '#fbf6ec', M: '#cfc8de', z: '#e0414f', name: '산타' },
-  tree:    { U: '#6fd394', o: '#3fa66a', O: '#26744c', x: '#1c5a3c', P: '#fbf6ec', m: '#e8424f', M: '#a8263c', z: '#fbf6ec', name: '트리' },
-  night:   { U: '#7d97ee', o: '#4f68c8', O: '#323f8c', x: '#252f6e', P: '#ffd25e', m: '#ffd25e', M: '#e39a2e', z: '#fbf6ec', name: '밤하늘' },
-  rudolph: { U: '#cf9a6c', o: '#a06a44', O: '#6c442c', x: '#553420', P: '#f7e9cf', m: '#f7e9cf', M: '#d8c09a', z: '#e0414f', name: '루돌프' },
+  santa:   { U: '#ff6e78', o: '#e0414f', O: '#a8263c', x: '#8a1c34', P: '#fbf6ec', m: '#fbf6ec', M: '#cfc8de', z: '#e0414f', name: 'SANTA' },
+  tree:    { U: '#6fd394', o: '#3fa66a', O: '#26744c', x: '#1c5a3c', P: '#fbf6ec', m: '#e8424f', M: '#a8263c', z: '#fbf6ec', name: 'TREE' },
+  night:   { U: '#7d97ee', o: '#4f68c8', O: '#323f8c', x: '#252f6e', P: '#ffd25e', m: '#ffd25e', M: '#e39a2e', z: '#fbf6ec', name: 'NIGHT SKY' },
+  rudolph: { U: '#cf9a6c', o: '#a06a44', O: '#6c442c', x: '#553420', P: '#f7e9cf', m: '#f7e9cf', M: '#d8c09a', z: '#e0414f', name: 'RUDOLPH' },
 };
 function humanPal(skin, out, extra) {
   return Object.assign({
@@ -262,8 +262,8 @@ function buildHuman(o) {
   };
 }
 const OPTS = {
-  hair: [['short', '짧은 머리'], ['long', '긴 머리'], ['pony', '묶은 머리']],
-  hat: [['beanie', '비니'], ['muff', '귀마개'], ['ribbon', '리본'], ['none', '없음']],
+  hair: [['short', 'SHORT'], ['long', 'LONG'], ['pony', 'PONYTAIL']],
+  hat: [['beanie', 'BEANIE'], ['muff', 'EARMUFFS'], ['ribbon', 'RIBBON'], ['none', 'NONE']],
   outfit: Object.keys(OUTFITS).map(k => [k, OUTFITS[k].name]),
   skin: SKINS.map((s, i) => [i, SKIN_NAMES[i]]),
 };

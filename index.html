@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>솔밤배 초대장</title>
+<title>Sol &amp; Bambi's Holiday Party</title>
 <meta name="theme-color" content="#11141f">
 <meta name="description" content="솔과 밤비가 여는 포트럭 크리스마스 파티, 솔밤배 초대장">
-<meta property="og:title" content="솔밤배 · 크리스마스 포트럭 파티 초대장">
-<meta property="og:description" content="장난꾸러기들이 훔쳐 간 초대장을 되찾아 주세요!">
+<meta property="og:title" content="Sol &amp; Bambi's Holiday Party · Invitation">
+<meta property="og:description" content="Find the stolen invitation and join the party!">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/galmuri@2.39.9/dist/galmuri.css">
 <style>
 :root{
@@ -47,7 +47,7 @@ img.px,canvas.px{image-rendering:pixelated}
 /* ---------- 타이틀 ---------- */
 #title{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;text-align:center;padding-top:9%}
 .t-pre{display:flex;align-items:center;gap:8px;font-size:11px;letter-spacing:3px;color:var(--sky)}
-.logo{margin-top:6px;font-family:'Galmuri11';font-weight:700;font-size:76px;line-height:1;color:#fff1c2;letter-spacing:4px;
+.logo{margin-top:8px;font-family:'Galmuri11';font-weight:700;font-size:52px;line-height:1.05;color:#fff1c2;letter-spacing:4px;
   text-shadow:0 4px 0 var(--red),0 8px 0 var(--red2),4px 8px 0 var(--red2),0 12px 0 var(--ink),4px 12px 0 var(--ink),-4px 4px 0 var(--ink),4px 4px 0 var(--red2)}
 .t-sub{margin-top:18px;font-size:12px;letter-spacing:2px;color:#fff;background:rgba(13,15,26,.55);padding:5px 10px}
 .t-sub b{color:var(--gold);font-weight:400}
@@ -59,7 +59,7 @@ img.px,canvas.px{image-rendering:pixelated}
 /* ---------- 꾸미기 ---------- */
 #custom{position:absolute;left:14px;right:14px;bottom:16px;padding:26px 14px 14px}
 .row{display:flex;align-items:center;height:40px;gap:8px}
-.row .lb{width:44px;font-size:12px;color:var(--sky)}
+.row .lb{width:56px;font-size:12px;color:var(--sky)}
 .row .val{flex:1;text-align:center;font-size:15px;color:#fff;display:flex;align-items:center;justify-content:center;gap:4px}
 .arr{width:38px;height:32px;background:#3a4468;color:var(--gold);font-size:12px;
   box-shadow:0 calc(-1*var(--p)) 0 0 var(--ink),0 var(--p) 0 0 var(--ink),calc(-1*var(--p)) 0 0 0 var(--ink),var(--p) 0 0 0 var(--ink),inset var(--p) var(--p) 0 0 #56628f,inset calc(-1*var(--p)) calc(-1*var(--p)) 0 0 #272e4a}
@@ -110,7 +110,7 @@ img.px,canvas.px{image-rendering:pixelated}
 .to b{color:var(--navy);font-weight:400}
 .scene{margin:12px 0 4px;background:#1f2538;box-shadow:0 0 0 var(--p) var(--ink)}
 #portrait{display:block;width:100%;image-rendering:pixelated}
-.ctitle{text-align:center;font-family:'Galmuri11';font-weight:700;font-size:40px;color:var(--red);margin-top:14px;text-shadow:0 3px 0 var(--red2),0 6px 0 #e6d6ae}
+.ctitle{text-align:center;font-family:'Galmuri11';font-weight:700;font-size:30px;line-height:1.1;color:var(--red);margin-top:14px;text-shadow:0 3px 0 var(--red2),0 6px 0 #e6d6ae}
 .csub{text-align:center;font-size:10px;letter-spacing:2px;color:#8a6a40;margin:8px 0 12px}
 .cintro{text-align:center;font-size:14px;line-height:1.75;white-space:pre-line;word-break:keep-all;margin-bottom:12px}
 .info{display:flex;gap:12px;align-items:flex-start;padding:12px 2px;border-top:3px dotted #d6c49c}
@@ -136,20 +136,20 @@ noscript{position:absolute;inset:0;padding:24px;color:#fff;line-height:1.8}
 
   <div id="title">
     <div class="t-pre"><img class="px" data-icon="star" data-s="2" alt="">SOL &amp; BAMBI'S<img class="px" data-icon="star" data-s="2" alt=""></div>
-    <div class="logo">솔밤배</div>
-    <div class="t-sub">CHRISTMAS POTLUCK PARTY · <b>12.12</b></div>
-    <div class="tap box"><span>화면을 톡! 눌러서 시작</span></div>
-    <button id="quick" class="hide">초대장 바로 보기 ▶</button>
+    <div class="logo">HOLIDAY<br>PARTY</div>
+    <div class="t-sub">CHRISTMAS POTLUCK · <b>12.12</b></div>
+    <div class="tap box"><span>TAP TO START</span></div>
+    <button id="quick" class="hide">VIEW INVITATION ▶</button>
   </div>
 
   <div id="custom" class="box hide">
-    <div class="ribbon">나를 꾸며 줘!</div>
-    <div class="row"><span class="lb">머리</span><button class="arr" data-k="hair" data-d="-1">◀</button><span class="val" id="v-hair"></span><button class="arr" data-k="hair" data-d="1">▶</button></div>
-    <div class="row"><span class="lb">모자</span><button class="arr" data-k="hat" data-d="-1">◀</button><span class="val" id="v-hat"></span><button class="arr" data-k="hat" data-d="1">▶</button></div>
-    <div class="row"><span class="lb">옷</span><button class="arr" data-k="outfit" data-d="-1">◀</button><span class="val" id="v-outfit"></span><button class="arr" data-k="outfit" data-d="1">▶</button></div>
-    <div class="row"><span class="lb">피부</span><button class="arr" data-k="skin" data-d="-1">◀</button><span class="val" id="v-skin"></span><button class="arr" data-k="skin" data-d="1">▶</button></div>
-    <div class="row"><span class="lb">이름</span><input id="nameIn" maxlength="8" placeholder="안 써도 돼요" autocomplete="off" enterkeyhint="done"></div>
-    <div class="btns"><button class="btn b2" id="rnd">랜덤</button><button class="btn" id="go">출발!</button></div>
+    <div class="ribbon">DRESS UP!</div>
+    <div class="row"><span class="lb">HAIR</span><button class="arr" data-k="hair" data-d="-1">◀</button><span class="val" id="v-hair"></span><button class="arr" data-k="hair" data-d="1">▶</button></div>
+    <div class="row"><span class="lb">HAT</span><button class="arr" data-k="hat" data-d="-1">◀</button><span class="val" id="v-hat"></span><button class="arr" data-k="hat" data-d="1">▶</button></div>
+    <div class="row"><span class="lb">OUTFIT</span><button class="arr" data-k="outfit" data-d="-1">◀</button><span class="val" id="v-outfit"></span><button class="arr" data-k="outfit" data-d="1">▶</button></div>
+    <div class="row"><span class="lb">SKIN</span><button class="arr" data-k="skin" data-d="-1">◀</button><span class="val" id="v-skin"></span><button class="arr" data-k="skin" data-d="1">▶</button></div>
+    <div class="row"><span class="lb">NAME</span><input id="nameIn" maxlength="8" placeholder="optional" autocomplete="off" enterkeyhint="done"></div>
+    <div class="btns"><button class="btn b2" id="rnd">RANDOM</button><button class="btn" id="go">START!</button></div>
   </div>
 
   <div id="dlg" class="box hide">
@@ -162,33 +162,33 @@ noscript{position:absolute;inset:0;padding:24px;color:#fff;line-height:1.8}
 
   <div id="piece" class="modal hide">
     <div class="letter paper">
-      <div class="ribbon">초대장 조각을 찾았다!</div>
+      <div class="ribbon">PIECE FOUND!</div>
       <div id="pslots"></div>
-      <div class="p-lb"><span id="pn"></span> 조각</div>
+      <div class="p-lb">INVITATION PIECE <span id="pn"></span> / 3</div>
       <div id="pl"></div>
       <div id="px"></div>
-      <button class="btn" id="pOk">계속 가기 ▶</button>
+      <button class="btn" id="pOk">CONTINUE ▶</button>
     </div>
   </div>
 
-  <div id="merry" class="hide"><div class="m1">MERRY<br>CHRISTMAS!</div><br><div class="m2 box">화면을 톡!</div></div>
+  <div id="merry" class="hide"><div class="m1">MERRY<br>CHRISTMAS!</div><br><div class="m2 box">TAP!</div></div>
 
   <div id="card" class="modal hide">
     <div class="letter">
       <div class="inner">
         <div class="to">To. <b id="toName"></b></div>
         <div class="scene"><canvas id="portrait" width="80" height="40"></canvas></div>
-        <div class="ctitle">솔밤배</div>
+        <div class="ctitle">HOLIDAY PARTY</div>
         <div class="csub">SOL &amp; BAMBI'S CHRISTMAS POTLUCK PARTY</div>
         <div class="cintro" id="cIntro"></div>
         <div class="info"><img data-icon="cal" alt=""><div><div class="k">WHEN</div><div class="v" id="cWhen"></div></div></div>
         <div class="info"><img data-icon="pin" alt=""><div><div class="k">WHERE</div><div class="v" id="cWhere"></div></div></div>
         <div class="info"><img data-icon="gift" alt=""><div><div class="k">POTLUCK</div><div class="v" id="cPot"></div></div></div>
         <div class="cbtns">
-          <button class="btn b3" id="bMap">지도 보기</button>
-          <button class="btn b4" id="bCopy">주소 복사</button>
-          <button class="btn wide hide" id="bRsvp">참석 알려주기</button>
-          <button class="btn b2 wide" id="bAgain">처음부터 다시</button>
+          <button class="btn b3" id="bMap">MAP</button>
+          <button class="btn b4" id="bCopy">COPY ADDRESS</button>
+          <button class="btn wide hide" id="bRsvp">RSVP</button>
+          <button class="btn b2 wide" id="bAgain">PLAY AGAIN</button>
         </div>
       </div>
     </div>
