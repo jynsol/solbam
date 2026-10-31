@@ -701,9 +701,9 @@ function hideHint() { hintEl.classList.add('hide'); }
 const waitTap = () => new Promise(r => { S.tapRes = r; });
 const walkUntil = x => { S.mode = 'walk'; S.walkTo = x; return new Promise(r => { S.walkRes = r; }); };
 function onDown(e) {
-  if (e.target.closest && e.target.closest('button,input,#custom,.modal')) return;
+  if (e.target.closest && e.target.closest('button,input,#gate,.modal')) return;
   if (e.preventDefault) e.preventDefault();
-  if (S.mode === 'title') { startGame(); return; }
+  if (S.mode === 'title') { openGate(); return; }
   if (dlgTap()) return;
   if (S.tapRes) { const r = S.tapRes; S.tapRes = null; r(); return; }
   if (S.mode === 'walk') S.holding = true; else if (S.mode === 'battle') startAttack();
@@ -741,10 +741,41 @@ function setScene(kind) {
     sol.visible = true; bambi.visible = false; player.x = 30; S.cam = player.x - LW * 0.34;
   }
 }
+/* ---------- 이름 + 비밀번호 ---------- */
+async function unlock(pw) {
+  const raw = Uint8Array.from(atob(CONFIG.secret), c => c.charCodeAt(0));
+  const salt = raw.slice(0, 16), iv = raw.slice(16, 28), data = raw.slice(28);
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: 200000, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+  const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, data);
+  Object.assign(CONFIG, JSON.parse(new TextDecoder().decode(plain)));
+}
+function openGate() {
+  S.mode = 'gate'; $('#title').classList.add('hide'); $('#gate').classList.remove('hide');
+  try { $('#gName').value = localStorage.getItem('solbam_name') || ''; } catch (e) {}
+}
+async function submitGate() {
+  const name = $('#gName').value.trim(), pw = $('#gPass').value.trim(), err = $('#gErr'), box = $('#gate');
+  const fail = msg => { err.textContent = msg; box.classList.remove('shake'); void box.offsetWidth; box.classList.add('shake'); };
+  if (!name) return fail('이름을 적어 주세요');
+  err.textContent = '확인 중…';
+  try { await unlock(pw); } catch (e) { return fail('비밀번호가 달라요'); }
+  err.textContent = ''; look.name = name.slice(0, 8);
+  try { localStorage.setItem('solbam_name', look.name); localStorage.setItem('solbam_pw', pw); } catch (e) {}
+  document.activeElement && document.activeElement.blur();
+  box.classList.add('hide'); startGame();
+}
+$('#gGo').addEventListener('click', submitGate);
+$('#gName').addEventListener('keydown', e => { if (e.key === 'Enter') $('#gPass').focus(); });
+$('#gPass').addEventListener('keydown', e => { if (e.key === 'Enter') submitGate(); });
 function startGame() {
   $('#title').classList.add('hide'); PF = CH.player; player.visible = true; runGame();
 }
-$('#quick').addEventListener('click', e => { e.stopPropagation(); PF = CH.player; $('#title').classList.add('hide'); showCard(); });
+$('#quick').addEventListener('click', async e => {
+  e.stopPropagation();
+  let pw = null, nm = ''; try { pw = localStorage.getItem('solbam_pw'); nm = localStorage.getItem('solbam_name') || ''; } catch (_) {}
+  try { await unlock(pw || ''); look.name = nm; PF = CH.player; $('#title').classList.add('hide'); showCard(); } catch (_) { openGate(); }
+});
 
 /* ---------- 이야기 ---------- */
 async function runGame() {

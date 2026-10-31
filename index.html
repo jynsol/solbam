@@ -87,7 +87,16 @@ img.px,canvas.px{image-rendering:pixelated}
 #hint{position:absolute;left:50%;bottom:34px;transform:translateX(-50%);font-size:14px;padding:11px 16px;white-space:nowrap;pointer-events:none;animation:bob 1s steps(2) infinite}
 #hint b{color:var(--gold);font-weight:400}
 
-/* ---------- 모달 ---------- */
+/* ---------- 입장 ---------- */
+#gate{position:absolute;left:14px;right:14px;bottom:18%;padding:28px 14px 14px}
+#gate .row input{flex:1;height:36px;background:var(--ink);border:0;color:#fff;font-family:inherit;font-size:16px;padding:0 10px;outline:none;border-radius:0;box-shadow:inset 0 0 0 2px #3a4468;-webkit-user-select:text;user-select:text}
+#gate .row input:focus{box-shadow:inset 0 0 0 2px var(--gold)}
+#gate .row input::placeholder{color:#6a7398}
+#gErr{min-height:18px;margin-top:8px;text-align:center;font-size:12px;color:#ff8a8a}
+#gate .btn{width:100%;margin-top:6px}
+.shake{animation:shk .3s steps(4)}
+@keyframes shk{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+/* ---------- 모달
 .modal{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:22px;background:rgba(10,12,20,.6)}
 .pop{animation:pop .36s steps(5) both}
 @keyframes pop{0%{transform:scale(.4);opacity:0}70%{transform:scale(1.05)}100%{transform:scale(1)}}
@@ -142,6 +151,13 @@ noscript{position:absolute;inset:0;padding:24px;color:#fff;line-height:1.8}
     <button id="quick" class="hide">VIEW INVITATION ▶</button>
   </div>
 
+  <div id="gate" class="box hide">
+    <div class="ribbon">WELCOME!</div>
+    <div class="row"><span class="lb">NAME</span><input id="gName" maxlength="8" placeholder="이름을 적어 주세요" autocomplete="off" enterkeyhint="next"></div>
+    <div class="row"><span class="lb">PASS</span><input id="gPass" type="password" inputmode="numeric" maxlength="12" placeholder="비밀번호" autocomplete="off" enterkeyhint="go"></div>
+    <div id="gErr"></div>
+    <button class="btn" id="gGo">START!</button>
+  </div>
   <div id="dlg" class="box hide">
     <div class="pic"><canvas id="dlgPic" width="22" height="22"></canvas></div>
     <div id="dlgName" class="tag"></div>
@@ -184,27 +200,15 @@ noscript{position:absolute;inset:0;padding:24px;color:#fff;line-height:1.8}
     </div>
   </div>
   <div id="toast" class="box"></div>
-  <noscript>솔밤배 · 솔과 밤비가 여는 포트럭 크리스마스 파티<br>2026년 12월 12일(토) 19:00 – 23:30<br>서울 강남구 압구정로50길 지하1층 21호 (압구정로데오역 6번 출구 161m)</noscript>
+  <noscript>이 초대장은 자바스크립트가 필요해요.</noscript>
 </div>
 
 <script>
 /* =========================================================
    초대장 내용 — 여기만 고치면 돼요
    ========================================================= */
-const CONFIG = {
-  pieces: [
-    { label: '무슨 파티?', text: '솔과 밤비가 여는\n포트럭 크리스마스 파티,\n솔밤배에 초대합니다!' },
-    { label: '언제?',      text: '2026년 12월 12일 토요일\n저녁 7시 ~ 밤 11시 30분' },
-    { label: '어디서?',    text: '서울 강남구 압구정로50길\n지하1층 21호\n압구정로데오역 6번 출구에서 161m' },
-  ],
-  intro:   '솔과 밤비가 여는\n포트럭 크리스마스 파티에 초대합니다!',
-  when:    '2026. 12. 12 (토)<br>저녁 7:00 – 밤 11:30',
-  where:   '서울 강남구 압구정로50길 지하1층 21호<small>압구정로데오역 6번 출구에서 161m</small>',
-  address: '서울 강남구 압구정로50길 지하1층 21호',
-  potluck: '', // TODO 포트럭 안내 문구 (비워 두면 "곧 알려드릴게요"로 표시)
-  rsvpUrl: '', // TODO 참석 회신 링크 (비워 두면 버튼 숨김)
-  mapUrl:  'https://map.naver.com/p/search/' + encodeURIComponent('서울 강남구 압구정로50길'),
-};
+// 파티 정보는 비밀번호로 암호화돼 있어요. 수정은 Claude에게 요청해 주세요.
+const CONFIG = { secret: 'WVK5lhbFjG/uxlGGYGNaeI0gkwhWiASOEnZj6AI4griDXwC+gLGcb2TNFbe6I5xcS2tk2Y8UvXMdvq35lyoad15eA9LfDrzGqx9vQRciBnahwGA3Azy5IPtACez/trW9isSrr8Yka9IajwSZlUei+lPCIzDi76NQEMTUHGmuXG7W3MULkU8uCjcw90qcmG8UNn0+uLD61Cxx0QEiIm4UPlJxCMfmRK2zJtH7wm5VsWYHy0sd/MO1fDWgZp6yRG1ApWR4D4pH+6HhP+BKWXIJG9WEpxOKyChLRya2BBYUl5zK9QBbGAGCXsHiUg1Rg9QBO1bhPNZLcLFt78lIL/HsOwAVq02mI8A+OVeC/yd63DByFwuvZ6OZf55Ycv7g2l6z7b91iA69b0RG0n9U1E9nQ5u0UAw7OXw5U95Emki0vH4w9nh0vOBvhfe9m4BoBk0Yavn8rsGd8f2hAayItSBoLMMG0wyl0y7pq53C+5wOS9C+OZOj7C9+2PH7jejyZPVglSoEh/+Hk6xIXmeVFsnNJhIrJvhwIJattjrGvSTwqR/V4MDiESPhqikMr3R7yOIqzcEbzAVeB0dtsUxikRjpug7sAhs7sovG0tRzbYYz9eJb15J2QtWXPwrofyUYWAGtQqUBQt4gAvemAFNEzJczawbU2jIoHye+fwmw8y/+sUcKWQOpFXvnQcUFu1Q6HUrJuRclevPVFUXa3Dcz6tbaRP2+PI707lAr4b8ejxszKZ6cUEbEzpUBodWCCOhjlE6cZiwfI87QjcTkQHdurX6Q3Gnzx2d4scC9twIhqlM2lpX54fs2H6MZDPGS+x3Zu8zJ7VtuU+rwMBw/OSnyR5R8loC9nF9ty6XBe+xSa+OClplXdacAFJmuWok2l83cPryTrUXtbPQg+WPoqnz8qfCnCcTC0R57LRRac2vlTnRYsDR+NrKkjYjsILQdKsC+pZXjoDjQGKa/lvbOH54u8e6kk2gX8jsh6IAMUvYQ2Do2xBavWOUdMLNDCqeu8+RAn46escXC3fRJvtsnlOTLYnnkoYSZNd0Zy/ZlMqaPFiEft8Yxjtzpr6r94GgEeWvRqFke2egy7VS7HkpiU9zhuaBvImYKWzdOYS4pY6vZ+lqTEoZGBGZxdIhhjLUosrv4tZwAc6bB/HJEHVwVaICMEbtoVimENkw6PGn1qqJYDC2765w3Hq2OJKoZUvqmJHuJFtmobhbtMytPhCyMvE/qLxs=' };
 </script>
 <script src="sprites.js"></script>
 <script src="game.js"></script>
