@@ -97,7 +97,7 @@ const TREE_IMG = {};
 function loadImgs() {
   const TT = ['bubble', 'large', 'pico', 'pine', 'slim', 'smallpine', 'spruce', 'thick', 'tiny', 'tri'], PP = ['cold', 'teal', 'gteal', 'green', 'night'];
   const trees = TT.flatMap(t => PP.map(p => 'trees/' + t + '_' + p));
-  return Promise.all([...trees, 'pine_s', 'bush1', 'bush2', 'bush3', 'grass', 'bunny', 'player', 'sol', 'bambi', 'en_fuzz', 'en_slime', 'en_mush', 'guests'].map(n => new Promise(res => {
+  return Promise.all([...trees, 'bunny', 'player', 'sol', 'bambi', 'en_fuzz', 'en_slime', 'en_mush', 'guests'].map(n => new Promise(res => {
     const im = new Image(); im.onload = () => { TREE_IMG[n] = im; res(); }; im.onerror = () => res(); im.src = 'img/' + n + '.png';
   })));
 }
@@ -201,7 +201,8 @@ function buildWorld() {
 }
 function buildWorldInner() {
   farV = [];
-  for (let i = 0; i < 5; i++) farV.push(makePine(irand(38, 58), irand(24, 34), PAL_FAR));
+  for (const t of ['pico', 'tiny', 'tri', 'smallpine']) for (const flip of [false, true]) { const im = TREE_IMG['trees/' + t + '_night']; if (im) farV.push(treeFromImg(im, { flip, tint: [0.32, 0.36, 0.52] })); }
+  if (!farV.length) for (let i = 0; i < 5; i++) farV.push(makePine(irand(38, 58), irand(24, 34), PAL_FAR));
   midV = [];
   for (const t of ['pico', 'tiny', 'tri', 'smallpine', 'spruce', 'slim']) for (const flip of [false, true]) { const im = TREE_IMG['trees/' + t + '_night']; if (im) midV.push(treeFromImg(im, { flip, tint: [0.55, 0.6, 0.78] })); }
   FAR = []; for (let x = -20; x < 640; x += irand(9, 16)) FAR.push({ x, v: irand(0, farV.length - 1), dy: irand(0, 5) });
@@ -217,8 +218,7 @@ function buildWorldInner() {
     x += Math.max(16, Math.round(tr.w * 0.62)) + irand(0, 12);
   }
   PROPS = [];
-  const pp = ['grass', 'grass', 'bush1', 'bush2', 'bush3', 'pine_s'].filter(n => TREE_IMG[n]);
-  if (pp.length) for (let x = 0; x < TREE_X - 80; x += irand(16, 42)) PROPS.push({ x, n: pick(pp), flip: Math.random() < 0.5, dy: irand(0, 2) });
+  
   BUN = [];
   for (const x of [130, 330, 470, 600, 720, 880]) BUN.push({ x: x + irand(-20, 20), dir: Math.random() < 0.5 ? -1 : 1, hop: null, cool: rand(0, 2), f: 0, jy: 0 });
   BIG.tree = makeBigTree();
