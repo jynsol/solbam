@@ -91,11 +91,11 @@ const WARM = ['#ffe27a', '#fff2b0', '#ffc94a', '#ffe27a', '#ff8a8a', '#fff2b0'];
 const PAL_FAR = { mid: '#1b2134', dark: '#181d2f', light: '#1f2639', trunk: '#161a2a' };
 const PAL_MID = { mid: '#22324a', dark: '#1d2b42', light: '#2a3c56', snow: '#5d7396', snow2: '#4a5f82', trunk: '#1d2235' };
 const PAL_NEAR = { mid: '#2c5c60', dark: '#1f4048', light: '#3f7c76', snow: '#e8f4fc', snow2: '#a9cbe3', trunk: '#5a3a2a', bulbs: true };
-let FAR = [], MID = [], NEAR = [], farV = [], midV = [];
+let FAR = [], MID = [], NEAR = [], farV = [], midV = [], PROPS = [], BUN = [];
 const BIG = { tree: null, lit: false, star: false };
 const TREE_IMG = {};
 function loadImgs() {
-  return Promise.all(['tree_big', 'tree_mid', 'tree_r', 'tree_s1', 'tree_s2'].map(n => new Promise(res => {
+  return Promise.all(['tree_big', 'tree_mid', 'tree_r', 'tree_s1', 'tree_s2', 'pine_s', 'bush1', 'bush2', 'bush3', 'grass', 'mush', 'log', 'bunny'].map(n => new Promise(res => {
     const im = new Image(); im.onload = () => { TREE_IMG[n] = im; res(); }; im.onerror = () => res(); im.src = 'img/' + n + '.png';
   })));
 }
@@ -136,6 +136,11 @@ function buildWorld() {
     NEAR.push({ x: x + irand(-4, 4), pine: tr, bulbs: tr.bulbs.map((b, i) => ({ ...b, col: WARM[(i * 3 + NEAR.length) % WARM.length], on: false, at: 0, seed: rand(0, 6.28) })) });
     x += Math.max(22, Math.round((tr.w || 40) * 0.75)) + irand(4, 16);
   }
+  PROPS = [];
+  const pp = ['grass', 'grass', 'bush1', 'bush2', 'bush3', 'log', 'mush', 'pine_s'].filter(n => TREE_IMG[n]);
+  if (pp.length) for (let x = 0; x < TREE_X - 80; x += irand(16, 42)) PROPS.push({ x, n: pick(pp), flip: Math.random() < 0.5, dy: irand(0, 2) });
+  BUN = [];
+  for (const x of [130, 330, 470, 600, 720, 880]) BUN.push({ x: x + irand(-20, 20), dir: Math.random() < 0.5 ? -1 : 1, hop: null, cool: rand(0, 2), f: 0, jy: 0 });
   BIG.tree = makeBigTree();
 }
 function makeBigTree() {
@@ -341,6 +346,17 @@ function update(rdt) {
     if (bambi.x < target - 1) { bambi.x += Math.min(72 * dt, target - bambi.x); bambi.moving = true; bambi.walkT += dt; } else bambi.moving = false;
   }
 
+  for (const b of BUN) {
+    if (b.hop) {
+      b.hop.t += dt; const p = b.hop.t / 0.42;
+      if (p >= 1) { b.x = b.hop.x1; b.hop = null; b.jy = 0; b.f = 0; b.cool = rand(0.15, 0.5); for (let k = 0; k < 4; k++) part({ k: 'px', x: b.x + rand(-4, 4), y: GY, vx: rand(-14, 14), vy: rand(-16, -6), g: 60, life: 0.35, cols: ['#ffffff', '#c4e2f6'] }); }
+      else { b.x = b.hop.x0 + (b.hop.x1 - b.hop.x0) * p; b.jy = -Math.sin(p * Math.PI) * 7; b.f = p < 0.3 ? 1 : p < 0.85 ? 2 : 3; }
+      continue;
+    }
+    b.cool -= dt; const d = b.x - player.x;
+    if (b.cool <= 0 && player.visible && Math.abs(d) < 48) { b.dir = d >= 0 ? 1 : -1; b.hop = { t: 0, x0: b.x, x1: b.x + b.dir * 20 }; }
+    else if (b.cool <= 0 && Math.random() < dt * 0.12) { b.dir = Math.random() < 0.5 ? -1 : 1; b.hop = { t: 0, x0: b.x, x1: b.x + b.dir * 12 }; }
+  }
   for (let i = P.length - 1; i >= 0; i--) {
     const p = P[i];
     if (p.delay > 0) { p.delay -= dt; continue; }
@@ -433,6 +449,13 @@ function render() {
     }
   }
   ctx.fillStyle = '#86a8d0'; for (const f of FOOT) { const xx = R(f.x - cam); if (xx > -2 && xx < LW + 2) ctx.fillRect(xx - 3 + f.alt * 3, GY + 2 + f.alt + oy, 2, 1); }
+  for (const p of PROPS) { const im = TREE_IMG[p.n], xx = p.x - cam; if (!im || xx < -30 || xx > LW + 30) continue; drawSp(im, xx - im.width / 2, GY - im.height + 2 + p.dy + oy, p.flip); }
+  const BI = TREE_IMG.bunny;
+  if (BI) { const cw = BI.width / 4; for (const b of BUN) {
+    const xx = R(b.x - cam - cw / 2); if (xx < -20 || xx > LW + 20) continue;
+    const y = R(GY - BI.height + 1 + oy + b.jy + [0, -5, -3, 0][b.f]);
+    ctx.save(); if (b.dir < 0) { ctx.translate(xx + cw, y); ctx.scale(-1, 1); ctx.drawImage(BI, b.f * cw, 0, cw, BI.height, 0, 0, cw, BI.height); } else ctx.drawImage(BI, b.f * cw, 0, cw, BI.height, xx, y, cw, BI.height); ctx.restore();
+  } }
   drawParts(false, cam, oy);
   if (sol.visible) { const sp = sol.cheer && (T * 4 | 0) % 2 ? SOL.cheer : SOL.front; drawSp(sp, sol.x - 12 - cam, feetY(sp) + oy - ((T * 1.5 | 0) % 2)); }
   if (bambi.visible) { const sp = bambi.moving ? ((bambi.walkT * 8 | 0) % 2 ? BAMBI.walkA : BAMBI.walkB) : bambi.cheer && (T * 4 | 0) % 2 ? BAMBI.cheer : BAMBI.front; drawSp(sp, bambi.x - 12 - cam, feetY(sp) + oy + bambi.oy - (bambi.moving ? (bambi.walkT * 8 | 0) % 2 : 0), bambi.moving && bambi.left); }
