@@ -93,30 +93,60 @@ const PAL_MID = { mid: '#22324a', dark: '#1d2b42', light: '#2a3c56', snow: '#5d7
 const PAL_NEAR = { mid: '#2c5c60', dark: '#1f4048', light: '#3f7c76', snow: '#e8f4fc', snow2: '#a9cbe3', trunk: '#5a3a2a', bulbs: true };
 let FAR = [], MID = [], NEAR = [], farV = [], midV = [];
 const BIG = { tree: null, lit: false, star: false };
+const TREE_IMG = {};
+function loadImgs() {
+  return Promise.all(['tree_big', 'tree_mid', 'tree_r', 'tree_s1', 'tree_s2'].map(n => new Promise(res => {
+    const im = new Image(); im.onload = () => { TREE_IMG[n] = im; res(); }; im.onerror = () => res(); im.src = 'img/' + n + '.png';
+  })));
+}
+// 그림에서 잘라낸 나무 → 색 변형/좌우 반전 + 전구 자리 계산
+function treeFromImg(img, o = {}) {
+  const w = img.width, h = img.height, c = mkCanvas(w, h + 2), g = c.getContext('2d');
+  if (o.flip) { g.translate(w, 0); g.scale(-1, 1); }
+  g.drawImage(img, 0, 0); g.setTransform(1, 0, 0, 1, 0, 0);
+  const id = g.getImageData(0, 0, w, h), d = id.data;
+  if (o.tint) for (let i = 0; i < d.length; i += 4) {
+    if (!d[i + 3] || (d[i] > 200 && d[i + 1] > 200 && d[i + 2] > 200)) continue;
+    d[i] *= o.tint[0]; d[i + 1] *= o.tint[1]; d[i + 2] *= o.tint[2];
+  }
+  g.putImageData(id, 0, 0);
+  const rows = [];
+  for (let y = 0; y < h; y++) { let L = -1, Rr = -1; for (let x = 0; x < w; x++) if (d[(y * w + x) * 4 + 3]) { if (L < 0) L = x; Rr = x; } rows.push([L, Rr]); }
+  const bulbs = [], ax = Math.floor(w / 2);
+  if (o.tiers) o.tiers.forEach(t => {
+    const r = Math.floor(t * h), [L, Rr] = rows[r]; if (L < 0 || Rr - L < 6) return;
+    const n = Math.max(2, Math.round((Rr - L) / (o.gap || 7)));
+    for (let j = 0; j < n; j++) { const u = j / (n - 1), x = Math.round(L + 2 + u * (Rr - L - 4)); bulbs.push({ lx: x - ax, ly: r + Math.round((1 - (2 * u - 1) ** 2) * 2) - (h + 2) }); }
+  });
+  return { cv: c, ax, h: h + 2, bulbs, rows, w };
+}
+const TINTS = [null, [0.82, 0.9, 1.0], [0.7, 0.86, 0.96]];
 function buildWorld() {
-  farV = []; midV = [];
+  farV = [];
   for (let i = 0; i < 5; i++) farV.push(makePine(irand(38, 58), irand(24, 34), PAL_FAR));
-  for (let i = 0; i < 5; i++) midV.push(makePine(irand(48, 68), irand(30, 40), PAL_MID));
-  FAR = []; for (let x = -20; x < 640; x += irand(9, 16)) FAR.push({ x, v: irand(0, 4), dy: irand(0, 5) });
-  MID = []; for (let x = -20; x < 1000; x += irand(16, 28)) MID.push({ x, v: irand(0, 4), dy: irand(0, 3) });
+  midV = [];
+  for (const n of ['tree_s1', 'tree_s2', 'tree_mid', 'tree_r']) for (const flip of [false, true]) if (TREE_IMG[n]) midV.push(treeFromImg(TREE_IMG[n], { flip, tint: [0.42, 0.52, 0.68] }));
+  if (!midV.length) for (let i = 0; i < 5; i++) midV.push(makePine(irand(48, 68), irand(30, 40), PAL_MID));
+  FAR = []; for (let x = -20; x < 640; x += irand(9, 16)) FAR.push({ x, v: irand(0, farV.length - 1), dy: irand(0, 5) });
+  MID = []; for (let x = -20; x < 1100; x += irand(14, 24)) MID.push({ x, v: irand(0, midV.length - 1), dy: irand(0, 6) });
   NEAR = [];
-  for (let x = -40; x < TREE_X - 90; x += irand(34, 50)) {
-    const pine = makePine(irand(62, 92), irand(38, 52), PAL_NEAR);
-    NEAR.push({ x: x + irand(-4, 4), pine, orn: [], bulbs: pine.bulbs.map((b, i) => ({ ...b, col: WARM[(i * 3 + x) % WARM.length], on: false, at: 0, seed: rand(0, 6.28) })) });
+  const pool = ['tree_mid', 'tree_r', 'tree_mid', 'tree_r', 'tree_s1', 'tree_s2', 'tree_big'].filter(n => TREE_IMG[n]);
+  for (let x = -40; x < TREE_X - 90;) {
+    const n = pick(pool), tr = TREE_IMG[n] ? treeFromImg(TREE_IMG[n], { flip: Math.random() < 0.5, tint: pick(TINTS), tiers: n === 'tree_big' ? [0.3, 0.45, 0.6, 0.75] : [0.35, 0.55, 0.75] }) : makePine(irand(62, 92), irand(38, 52), PAL_NEAR);
+    NEAR.push({ x: x + irand(-4, 4), pine: tr, bulbs: tr.bulbs.map((b, i) => ({ ...b, col: WARM[(i * 3 + NEAR.length) % WARM.length], on: false, at: 0, seed: rand(0, 6.28) })) });
+    x += Math.max(22, Math.round((tr.w || 40) * 0.75)) + irand(4, 16);
   }
   BIG.tree = makeBigTree();
 }
 function makeBigTree() {
-  const h = 118, w = 90, tiers = 5;
-  const p = makePine(h, w, { ...PAL_NEAR, mid: '#2e6464', dark: '#204a50', light: '#45877c', trunk: '#6b4430', bulbs: false }, tiers);
-  const bulbs = [], orn = [];
-  for (let ti = 0; ti < tiers; ti++) {
-    const r0 = Math.floor(((ti + 0.62) / tiers) * h), { hw } = p.hwAt(r0), n = 4 + ti * 2;
-    for (let j = 0; j < n; j++) { const u = j / (n - 1) * 2 - 1; bulbs.push({ lx: R(u * (hw - 2)), ly: r0 + 1 + R((1 - u * u) * 3) + R(u * 2) - p.h, col: WARM[(j + ti) % WARM.length], on: false, at: 0, seed: rand(0, 6.28) }); }
-    const rr = Math.floor(((ti + 0.9) / tiers) * h), hw2 = p.hwAt(rr).hw;
-    for (let j = 0; j < 2 + ti; j++) orn.push({ lx: irand(-hw2 + 4, hw2 - 5), ly: rr - p.h + irand(-2, 0), col: pick(['#d8394a', '#d8394a', '#ffd25e', '#e8f4fc']) });
-  }
-  return { ...p, bulbs, orn, top: -p.h + 1 };
+  if (!TREE_IMG.tree_big) { const p = makePine(118, 90, PAL_NEAR, 5); return { ...p, bulbs: p.bulbs.map(b => ({ ...b, col: pick(WARM), on: false, at: 0, seed: rand(0, 6.28) })), orn: [], top: -p.h + 1 }; }
+  const p = treeFromImg(TREE_IMG.tree_big, { tiers: [0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8], gap: 6 });
+  const orn = [];
+  [0.25, 0.35, 0.45, 0.55, 0.65, 0.75].forEach(t => {
+    const r = Math.floor(t * (p.h - 2)) + 3, [L, Rr] = p.rows[r]; if (L < 0) return;
+    for (let j = 0; j < 2; j++) orn.push({ lx: irand(L + 3, Rr - 4) - p.ax, ly: r - p.h, col: pick(['#d8394a', '#d8394a', '#ffd25e', '#e8f4fc']) });
+  });
+  return { ...p, bulbs: p.bulbs.map((b, j) => ({ ...b, col: WARM[j % WARM.length], on: false, at: 0, seed: rand(0, 6.28) })), orn, top: -p.h + 1 };
 }
 
 /* ---------- 상태 ---------- */
@@ -565,7 +595,7 @@ const walkUntil = x => { S.mode = 'walk'; S.walkTo = x; return new Promise(r => 
 function onDown(e) {
   if (e.target.closest && e.target.closest('button,input,#custom,.modal')) return;
   if (e.preventDefault) e.preventDefault();
-  if (S.mode === 'title') { startCustom(); return; }
+  if (S.mode === 'title') { startGame(); return; }
   if (dlgTap()) return;
   if (S.tapRes) { const r = S.tapRes; S.tapRes = null; r(); return; }
   if (S.mode === 'walk') S.holding = true; else if (S.mode === 'battle') startAttack();
@@ -589,8 +619,7 @@ function placeIcons() {
 
 /* ---------- 화면 흐름 ---------- */
 function loadSaved() {
-  try { const s = JSON.parse(localStorage.getItem('solbam_look') || 'null'); if (s) look = { ...look, ...s }; } catch (e) {}
-  try { if (localStorage.getItem('solbam_done')) $('#quick').classList.remove('hide'); } catch (e) {}
+    try { if (localStorage.getItem('solbam_done')) $('#quick').classList.remove('hide'); } catch (e) {}
 }
 const saveLook = () => { try { localStorage.setItem('solbam_look', JSON.stringify(look)); } catch (e) {} };
 function setScene(kind) {
@@ -604,27 +633,9 @@ function setScene(kind) {
     sol.visible = true; bambi.visible = false; player.x = 30; S.cam = player.x - LW * 0.34;
   }
 }
-function startCustom() {
-  S.mode = 'custom'; $('#title').classList.add('hide'); $('#custom').classList.remove('hide');
-  setScene('game'); S.amb = 0.62; S.camLock = 80; S.cam = 80;
-  $('#nameIn').value = look.name || ''; refreshCustom();
+function startGame() {
+  $('#title').classList.add('hide'); PF = buildPlayer(look); player.visible = true; runGame();
 }
-function refreshCustom() {
-  for (const k of ['hair', 'hat', 'outfit', 'skin']) {
-    const el = $('#v-' + k), lab = OPTS[k][look[k]][1];
-    if (k === 'skin') el.innerHTML = `<i class="sw" style="background:${SKINS[look.skin][0]}"></i>${lab}`;
-    else if (k === 'outfit') { const o = OUTFITS[OPTS.outfit[look.outfit][0]]; el.innerHTML = `<i class="sw" style="background:${o.o}"></i><i class="sw" style="background:${o.m}"></i>${lab}`; }
-    else el.textContent = lab;
-  }
-  PF = buildPlayer(look); player.visible = true;
-}
-document.querySelectorAll('.arr').forEach(b => b.addEventListener('click', () => {
-  const k = b.dataset.k, n = OPTS[k].length; look[k] = (look[k] + +b.dataset.d + n) % n; refreshCustom();
-  burstTwinkle(S.cam + LW / 2, LH * 0.25, 12, 54, ['#ffd76a', '#ffffff', '#ff9fc0']);
-}));
-$('#rnd').addEventListener('click', () => { for (const k of ['hair', 'hat', 'outfit', 'skin']) look[k] = irand(0, OPTS[k].length - 1); refreshCustom(); burstTwinkle(S.cam + LW / 2, LH * 0.25, 20, 70, ['#ffd76a', '#ffffff', '#5cff9a', '#ff6b7a']); });
-$('#nameIn').addEventListener('keydown', e => { if (e.key === 'Enter') e.target.blur(); });
-$('#go').addEventListener('click', () => { look.name = $('#nameIn').value.trim().slice(0, 8); saveLook(); $('#nameIn').blur(); $('#custom').classList.add('hide'); runGame(); });
 $('#quick').addEventListener('click', e => { e.stopPropagation(); PF = buildPlayer(look); $('#title').classList.add('hide'); showCard(); });
 
 /* ---------- 이야기 ---------- */
@@ -638,12 +649,12 @@ async function runGame() {
   await say('밤비', '장난꾸러기들이 트리 장식이랑\n초대장을 훔쳐 갔어!');
   await say('밤비', '같이 찾아줄래?\n나 먼저 가 있을게!');
   bambi.guide = true; bambi.left = false;
-  hint('<b>HOLD</b> to walk');
+  hint('화면을 <b>꾹</b> 누르고 있으면 걸어가요');
   for (let i = 0; i < 3; i++) {
-    if (i === 2) { await walkUntil(SOL_X); S.holding = false; hideHint(); await solVoice(); hint('<b>HOLD</b> to keep going'); }
+    if (i === 2) { await walkUntil(SOL_X); S.holding = false; hideHint(); await solVoice(); hint('<b>꾹</b> 눌러서 계속 가요'); }
     await walkUntil(EV[i].x - 40); S.holding = false; hideHint();
     await encounter(i);
-    hint('<b>HOLD</b> to keep going');
+    hint('<b>꾹</b> 눌러서 계속 가요');
   }
   await walkUntil(END_X); S.holding = false; hideHint();
   await ending();
@@ -661,7 +672,7 @@ async function encounter(i) {
   e.hpShow = 99;
   await say(e.name, e.line);
   S.mode = 'battle'; e.state = 'battle';
-  hint(i === 0 ? '<b>TAP TAP</b> to attack!' : '<b>TAP TAP TAP!</b>');
+  hint(i === 0 ? '화면을 <b>톡톡</b> 눌러서 공격!' : '<b>톡톡톡!</b>');
   const iv = setInterval(() => { if (e.hp < e.max) { hideHint(); clearInterval(iv); } }, 100);
   await new Promise(r => { e.res = r; });
   clearInterval(iv); hideHint();
@@ -718,7 +729,7 @@ async function ending() {
   sol.cheer = true; await say('솔', '호호호! 자, 마지막 장식은\n네가 달아줘!'); sol.cheer = false;
   item = { sp: STAR, x: player.x, y: GY - 42, t: 0, visible: true };
   player.cheer = true; flareP(item.x, item.y, 12, 0.4); burstTwinkle(item.x, item.y, 10, 40, ['#ffd76a', '#fff']);
-  hint('<b>TAP</b> to place the star'); S.mode = 'tap';
+  hint('화면을 <b>톡!</b> 눌러서 별을 달아 줘'); S.mode = 'tap';
   await waitTap();
   hideHint(); S.mode = 'cutscene'; player.cheer = false;
   const topY = GY + 3 + BIG.tree.top - 4;
@@ -763,7 +774,7 @@ function showCard() {
   $('#cPot').textContent = CONFIG.potluck || '포트럭 안내는 곧 알려드릴게요!';
   if (CONFIG.rsvpUrl) $('#bRsvp').classList.remove('hide');
   const pc = $('#portrait'), g = pc.getContext('2d'); g.imageSmoothingEnabled = false; g.clearRect(0, 0, pc.width, pc.height);
-  const t = makePine(34, 30, { ...PAL_NEAR, bulbs: false });
+  const t = TREE_IMG.tree_s1 ? treeFromImg(TREE_IMG.tree_s1) : makePine(34, 30, { ...PAL_NEAR, bulbs: false });
   g.drawImage(t.cv, 40 - t.ax, 37 - t.h + 2); g.drawImage(STAR, 35, 0);
   g.fillStyle = '#c4e2f6'; g.fillRect(0, 37, 80, 3); g.fillStyle = '#ffffff'; g.fillRect(0, 37, 80, 1);
   const pf = PF || buildPlayer(look);
@@ -775,14 +786,14 @@ $('#bMap').addEventListener('click', () => window.open(CONFIG.mapUrl, '_blank'))
 $('#bRsvp').addEventListener('click', () => window.open(CONFIG.rsvpUrl, '_blank'));
 $('#bCopy').addEventListener('click', async () => {
   const t = CONFIG.address;
-  try { await navigator.clipboard.writeText(t); toast('ADDRESS COPIED!'); }
-  catch (e) { const ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); toast('ADDRESS COPIED!'); } catch (_) { toast(t); } ta.remove(); }
+  try { await navigator.clipboard.writeText(t); toast('주소를 복사했어요!'); }
+  catch (e) { const ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); toast('주소를 복사했어요!'); } catch (_) { toast(t); } ta.remove(); }
 });
 $('#bAgain').addEventListener('click', () => location.reload());
 
 /* ---------- 시작 ---------- */
-function init() {
-  resize(); buildWorld(); loadSaved(); placeIcons();
+async function init() {
+  resize(); await loadImgs(); buildWorld(); loadSaved(); placeIcons();
   for (let i = 0; i < 70; i++) FLAKES.push({ x: rand(0, LW), y: rand(0, LH), vy: rand(6, 16), w: rand(1, 2.5), p: rand(0, 6), z: rand(0.4, 1.4) });
   setScene('title');
   addEventListener('resize', resize);
