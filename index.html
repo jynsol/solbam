@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>솔밤배 초대장</title>
+<meta name="theme-color" content="#11141f">
+<meta name="description" content="솔과 밤비가 여는 포트럭 크리스마스 파티, 솔밤배 초대장">
+<meta property="og:title" content="솔밤배 · 크리스마스 포트럭 파티 초대장">
+<meta property="og:description" content="장난꾸러기들이 훔쳐 간 초대장을 되찾아 주세요!">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/galmuri@2.39.9/dist/galmuri.css">
+<style>
+:root{
+  --navy:#1e2235; --navy2:#2c3352; --ink:#0d0f1a; --cream:#f6ecd4; --paper:#fbf3dc; --red:#d8394a; --red2:#a3233a; --red3:#ff6f7c;
+  --gold:#ffd25e; --gold2:#e89a2c; --green:#3fa66a; --sky:#c4e2f6; --sky2:#86b4da;
+  --font:'Galmuri11','Galmuri9',ui-monospace,monospace; --p:3px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#0a0c14;overflow:hidden;overscroll-behavior:none}
+body{font-family:var(--font);color:var(--cream);-webkit-font-smoothing:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+#app{position:relative;margin:0 auto;height:100vh;height:100dvh;width:min(100vw,60vh);width:min(100vw,60dvh);overflow:hidden;touch-action:none;background:#11141f}
+#cv{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated;display:block}
+.hide{display:none!important}
+button{font-family:inherit;cursor:pointer;border:0;background:none;color:inherit;-webkit-tap-highlight-color:transparent}
+img.px,canvas.px{image-rendering:pixelated}
+
+/* ---------- 픽셀 상자 ---------- */
+.box{position:relative;background:var(--navy);
+  box-shadow:0 calc(-1*var(--p)) 0 0 var(--ink),0 var(--p) 0 0 var(--ink),calc(-1*var(--p)) 0 0 0 var(--ink),var(--p) 0 0 0 var(--ink),
+    inset 0 0 0 var(--p) var(--cream),inset 0 0 0 calc(2*var(--p)) var(--navy2)}
+.paper{position:relative;background:var(--paper);color:var(--navy);
+  box-shadow:0 calc(-1*var(--p)) 0 0 var(--ink),0 var(--p) 0 0 var(--ink),calc(-1*var(--p)) 0 0 0 var(--ink),var(--p) 0 0 0 var(--ink),
+    inset 0 0 0 var(--p) #e6d6ae,inset calc(-1*var(--p)) calc(-1*var(--p)) 0 calc(2*var(--p)) #efe2c0}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;height:46px;padding:0 14px;font-size:16px;color:#fff;background:var(--red);
+  box-shadow:0 calc(-1*var(--p)) 0 0 var(--ink),0 var(--p) 0 0 var(--ink),calc(-1*var(--p)) 0 0 0 var(--ink),var(--p) 0 0 0 var(--ink),
+    inset var(--p) var(--p) 0 0 var(--red3),inset calc(-1*var(--p)) calc(-1*var(--p)) 0 0 var(--red2);text-shadow:0 2px 0 var(--red2)}
+.btn:active{transform:translateY(var(--p));box-shadow:0 calc(-1*var(--p)) 0 0 var(--ink),0 var(--p) 0 0 var(--ink),calc(-1*var(--p)) 0 0 0 var(--ink),var(--p) 0 0 0 var(--ink),inset var(--p) var(--p) 0 0 var(--red2)}
+.btn.b2{background:#3a4468;text-shadow:0 2px 0 #1e2235;box-shadow:0 calc(-1*var(--p)) 0 0 var(--ink),0 var(--p) 0 0 var(--ink),calc(-1*var(--p)) 0 0 0 var(--ink),var(--p) 0 0 0 var(--ink),inset var(--p) var(--p) 0 0 #56628f,inset calc(-1*var(--p)) calc(-1*var(--p)) 0 0 #272e4a}
+.btn.b3{background:var(--green);text-shadow:0 2px 0 #25734b;box-shadow:0 calc(-1*var(--p)) 0 0 var(--ink),0 var(--p) 0 0 var(--ink),calc(-1*var(--p)) 0 0 0 var(--ink),var(--p) 0 0 0 var(--ink),inset var(--p) var(--p) 0 0 #6fd394,inset calc(-1*var(--p)) calc(-1*var(--p)) 0 0 #25734b}
+.btn.b4{background:var(--cream);color:var(--navy);text-shadow:none;box-shadow:0 calc(-1*var(--p)) 0 0 var(--ink),0 var(--p) 0 0 var(--ink),calc(-1*var(--p)) 0 0 0 var(--ink),var(--p) 0 0 0 var(--ink),inset var(--p) var(--p) 0 0 #fff,inset calc(-1*var(--p)) calc(-1*var(--p)) 0 0 #d6c49c}
+.ribbon{position:absolute;left:50%;top:0;transform:translate(-50%,-60%);background:var(--red);color:#fff;font-size:14px;padding:6px 18px;white-space:nowrap;text-shadow:0 2px 0 var(--red2);
+  box-shadow:0 calc(-1*var(--p)) 0 0 var(--ink),0 var(--p) 0 0 var(--ink),calc(-1*var(--p)) 0 0 0 var(--ink),var(--p) 0 0 0 var(--ink),inset 0 calc(-1*var(--p)) 0 0 var(--red2),inset 0 var(--p) 0 0 var(--red3)}
+.ribbon::before,.ribbon::after{content:'';position:absolute;top:6px;width:12px;height:100%;background:var(--red2);z-index:-1;
+  clip-path:polygon(0 0,100% 0,100% 100%,0 100%,40% 50%)}
+.ribbon::before{left:-14px}.ribbon::after{right:-14px;transform:scaleX(-1)}
+
+/* ---------- 타이틀 ---------- */
+#title{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;text-align:center;padding-top:9%}
+.t-pre{display:flex;align-items:center;gap:8px;font-size:11px;letter-spacing:3px;color:var(--sky)}
+.logo{margin-top:6px;font-family:'Galmuri11';font-weight:700;font-size:76px;line-height:1;color:#fff1c2;letter-spacing:4px;
+  text-shadow:0 4px 0 var(--red),0 8px 0 var(--red2),4px 8px 0 var(--red2),0 12px 0 var(--ink),4px 12px 0 var(--ink),-4px 4px 0 var(--ink),4px 4px 0 var(--red2)}
+.t-sub{margin-top:18px;font-size:12px;letter-spacing:2px;color:#fff;background:rgba(13,15,26,.55);padding:5px 10px}
+.t-sub b{color:var(--gold);font-weight:400}
+.tap{position:absolute;bottom:13%;left:50%;transform:translateX(-50%);font-size:15px;padding:12px 20px;white-space:nowrap}
+.tap span{animation:blink 1.1s steps(2) infinite}
+#quick{position:absolute;bottom:5%;left:50%;transform:translateX(-50%);font-size:12px;color:var(--gold);padding:6px;border-bottom:3px solid var(--gold)}
+@keyframes blink{50%{opacity:0}}
+
+/* ---------- 꾸미기 ---------- */
+#custom{position:absolute;left:14px;right:14px;bottom:16px;padding:26px 14px 14px}
+.row{display:flex;align-items:center;height:40px;gap:8px}
+.row .lb{width:44px;font-size:12px;color:var(--sky)}
+.row .val{flex:1;text-align:center;font-size:15px;color:#fff;display:flex;align-items:center;justify-content:center;gap:4px}
+.arr{width:38px;height:32px;background:#3a4468;color:var(--gold);font-size:12px;
+  box-shadow:0 calc(-1*var(--p)) 0 0 var(--ink),0 var(--p) 0 0 var(--ink),calc(-1*var(--p)) 0 0 0 var(--ink),var(--p) 0 0 0 var(--ink),inset var(--p) var(--p) 0 0 #56628f,inset calc(-1*var(--p)) calc(-1*var(--p)) 0 0 #272e4a}
+.arr:active{transform:translateY(2px)}
+.sw{display:inline-block;width:14px;height:14px;box-shadow:0 0 0 2px var(--ink);margin-right:4px}
+#nameIn{flex:1;height:34px;background:var(--ink);border:0;color:#fff;font-family:inherit;font-size:16px;padding:0 10px;outline:none;border-radius:0;
+  box-shadow:inset 0 0 0 2px #3a4468;-webkit-user-select:text;user-select:text}
+#nameIn:focus{box-shadow:inset 0 0 0 2px var(--gold)}
+#nameIn::placeholder{color:#6a7398}
+.btns{display:flex;gap:12px;margin-top:14px}
+.btns .btn{flex:1}.btns .btn.b2{flex:0 0 96px}
+
+/* ---------- 대사창 ---------- */
+#dlg{position:absolute;left:12px;right:12px;bottom:16px;min-height:104px;padding:16px 14px 14px 92px;pointer-events:none}
+#dlg.in{animation:dIn .18s steps(3)}
+@keyframes dIn{from{transform:translateY(16px);opacity:0}}
+.pic{position:absolute;left:14px;top:14px;width:66px;height:66px;background:var(--sky);
+  box-shadow:0 0 0 var(--p) var(--ink),inset 0 calc(-3*var(--p)) 0 0 #9cc6e6}
+.pic canvas{width:66px;height:66px;image-rendering:pixelated;display:block}
+.tag{display:inline-block;font-size:13px;padding:3px 8px;margin-bottom:6px;color:#fff;background:#3a4468;box-shadow:0 0 0 2px var(--ink)}
+.tag.red{background:var(--red)}.tag.gold{background:var(--gold2)}.tag.blue{background:#4a63c4}
+#dlgText{font-size:15px;line-height:1.7;color:#fff;white-space:pre-wrap;word-break:keep-all;min-height:50px}
+#dlgNext{position:absolute;right:14px;bottom:12px;width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-top:8px solid var(--gold);animation:bob .5s steps(2) infinite}
+@keyframes bob{50%{transform:translateY(3px)}}
+#hint{position:absolute;left:50%;bottom:34px;transform:translateX(-50%);font-size:14px;padding:11px 16px;white-space:nowrap;pointer-events:none;animation:bob 1s steps(2) infinite}
+#hint b{color:var(--gold);font-weight:400}
+
+/* ---------- 모달 ---------- */
+.modal{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:22px;background:rgba(10,12,20,.6)}
+.pop{animation:pop .36s steps(5) both}
+@keyframes pop{0%{transform:scale(.4);opacity:0}70%{transform:scale(1.05)}100%{transform:scale(1)}}
+#piece .letter{width:100%;max-width:340px;padding:34px 18px 18px;text-align:center}
+#pslots{display:flex;justify-content:center;gap:10px;margin-bottom:12px}
+#pslots img{width:48px;image-rendering:pixelated}
+#pslots img.new{animation:glint .5s steps(2) 3}
+@keyframes glint{50%{filter:brightness(1.6)}}
+.p-lb{font-size:12px;color:#8a6a40;letter-spacing:1px}
+#pl{font-size:20px;color:var(--red);margin:6px 0 10px}
+#px{font-size:16px;line-height:1.8;white-space:pre-line;word-break:keep-all;margin-bottom:18px}
+#piece .btn{width:100%}
+
+/* ---------- 초대장 ---------- */
+#card{align-items:flex-start;overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y;padding:28px 18px}
+#card .letter{width:100%;max-width:360px;margin:auto;padding:10px;background:repeating-linear-gradient(45deg,var(--red) 0 10px,#fff 10px 20px);
+  box-shadow:0 calc(-1*var(--p)) 0 0 var(--ink),0 var(--p) 0 0 var(--ink),calc(-1*var(--p)) 0 0 0 var(--ink),var(--p) 0 0 0 var(--ink)}
+.inner{background:var(--paper);color:var(--navy);padding:16px 16px 18px;box-shadow:0 0 0 var(--p) var(--ink)}
+.to{font-size:14px;color:#8a6a40}
+.to b{color:var(--navy);font-weight:400}
+.scene{margin:12px 0 4px;background:#1f2538;box-shadow:0 0 0 var(--p) var(--ink)}
+#portrait{display:block;width:100%;image-rendering:pixelated}
+.ctitle{text-align:center;font-family:'Galmuri11';font-weight:700;font-size:40px;color:var(--red);margin-top:14px;text-shadow:0 3px 0 var(--red2),0 6px 0 #e6d6ae}
+.csub{text-align:center;font-size:10px;letter-spacing:2px;color:#8a6a40;margin:8px 0 12px}
+.cintro{text-align:center;font-size:14px;line-height:1.75;white-space:pre-line;word-break:keep-all;margin-bottom:12px}
+.info{display:flex;gap:12px;align-items:flex-start;padding:12px 2px;border-top:3px dotted #d6c49c}
+.info img{width:30px;image-rendering:pixelated;flex:0 0 auto;margin-top:2px}
+.info .k{font-size:11px;letter-spacing:2px;color:var(--green);margin-bottom:3px}
+.info .v{font-size:14px;line-height:1.65;word-break:keep-all}
+.info .v small{display:block;font-size:12px;color:#8a6a40}
+.cbtns{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+.cbtns .btn{height:42px;font-size:14px}
+.cbtns .wide{grid-column:1/-1}
+#toast{position:absolute;left:50%;bottom:44px;transform:translateX(-50%);font-size:13px;padding:10px 14px;color:var(--gold);opacity:0;transition:opacity .2s steps(3);pointer-events:none;white-space:nowrap}
+#toast.on{opacity:1}
+#merry{position:absolute;left:0;right:0;top:9%;text-align:center;pointer-events:none}
+.m1{font-family:'Galmuri11';font-weight:700;font-size:40px;line-height:1.15;color:#fff1c2;letter-spacing:2px;
+  text-shadow:0 3px 0 var(--red),0 6px 0 var(--red2),0 9px 0 var(--ink),3px 3px 0 var(--red2),-3px 3px 0 var(--ink)}
+.m2{display:inline-block;margin-top:18px;font-size:12px;padding:8px 12px}
+noscript{position:absolute;inset:0;padding:24px;color:#fff;line-height:1.8}
+</style>
+</head>
+<body>
+<div id="app">
+  <canvas id="cv"></canvas>
+
+  <div id="title">
+    <div class="t-pre"><img class="px" data-icon="star" data-s="2" alt="">SOL &amp; BAMBI'S<img class="px" data-icon="star" data-s="2" alt=""></div>
+    <div class="logo">솔밤배</div>
+    <div class="t-sub">CHRISTMAS POTLUCK PARTY · <b>12.12</b></div>
+    <div class="tap box"><span>화면을 톡! 눌러서 시작</span></div>
+    <button id="quick" class="hide">초대장 바로 보기 ▶</button>
+  </div>
+
+  <div id="custom" class="box hide">
+    <div class="ribbon">나를 꾸며 줘!</div>
+    <div class="row"><span class="lb">머리</span><button class="arr" data-k="hair" data-d="-1">◀</button><span class="val" id="v-hair"></span><button class="arr" data-k="hair" data-d="1">▶</button></div>
+    <div class="row"><span class="lb">모자</span><button class="arr" data-k="hat" data-d="-1">◀</button><span class="val" id="v-hat"></span><button class="arr" data-k="hat" data-d="1">▶</button></div>
+    <div class="row"><span class="lb">옷</span><button class="arr" data-k="outfit" data-d="-1">◀</button><span class="val" id="v-outfit"></span><button class="arr" data-k="outfit" data-d="1">▶</button></div>
+    <div class="row"><span class="lb">피부</span><button class="arr" data-k="skin" data-d="-1">◀</button><span class="val" id="v-skin"></span><button class="arr" data-k="skin" data-d="1">▶</button></div>
+    <div class="row"><span class="lb">이름</span><input id="nameIn" maxlength="8" placeholder="안 써도 돼요" autocomplete="off" enterkeyhint="done"></div>
+    <div class="btns"><button class="btn b2" id="rnd">랜덤</button><button class="btn" id="go">출발!</button></div>
+  </div>
+
+  <div id="dlg" class="box hide">
+    <div class="pic"><canvas id="dlgPic" width="22" height="22"></canvas></div>
+    <div id="dlgName" class="tag"></div>
+    <div id="dlgText"></div>
+    <div id="dlgNext"></div>
+  </div>
+  <div id="hint" class="box hide"></div>
+
+  <div id="piece" class="modal hide">
+    <div class="letter paper">
+      <div class="ribbon">초대장 조각을 찾았다!</div>
+      <div id="pslots"></div>
+      <div class="p-lb"><span id="pn"></span> 조각</div>
+      <div id="pl"></div>
+      <div id="px"></div>
+      <button class="btn" id="pOk">계속 가기 ▶</button>
+    </div>
+  </div>
+
+  <div id="merry" class="hide"><div class="m1">MERRY<br>CHRISTMAS!</div><br><div class="m2 box">화면을 톡!</div></div>
+
+  <div id="card" class="modal hide">
+    <div class="letter">
+      <div class="inner">
+        <div class="to">To. <b id="toName"></b></div>
+        <div class="scene"><canvas id="portrait" width="80" height="40"></canvas></div>
+        <div class="ctitle">솔밤배</div>
+        <div class="csub">SOL &amp; BAMBI'S CHRISTMAS POTLUCK PARTY</div>
+        <div class="cintro" id="cIntro"></div>
+        <div class="info"><img data-icon="cal" alt=""><div><div class="k">WHEN</div><div class="v" id="cWhen"></div></div></div>
+        <div class="info"><img data-icon="pin" alt=""><div><div class="k">WHERE</div><div class="v" id="cWhere"></div></div></div>
+        <div class="info"><img data-icon="gift" alt=""><div><div class="k">POTLUCK</div><div class="v" id="cPot"></div></div></div>
+        <div class="cbtns">
+          <button class="btn b3" id="bMap">지도 보기</button>
+          <button class="btn b4" id="bCopy">주소 복사</button>
+          <button class="btn wide hide" id="bRsvp">참석 알려주기</button>
+          <button class="btn b2 wide" id="bAgain">처음부터 다시</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="toast" class="box"></div>
+  <noscript>솔밤배 · 솔과 밤비가 여는 포트럭 크리스마스 파티<br>2026년 12월 12일(토) 19:00 – 23:30<br>서울 강남구 압구정로50길 지하1층 21호 (압구정로데오역 6번 출구 161m)</noscript>
+</div>
+
+<script>
+/* =========================================================
+   초대장 내용 — 여기만 고치면 돼요
+   ========================================================= */
+const CONFIG = {
+  pieces: [
+    { label: '무슨 파티?', text: '솔과 밤비가 여는\n포트럭 크리스마스 파티,\n솔밤배에 초대합니다!' },
+    { label: '언제?',      text: '2026년 12월 12일 토요일\n저녁 7시 ~ 밤 11시 30분' },
+    { label: '어디서?',    text: '서울 강남구 압구정로50길\n지하1층 21호\n압구정로데오역 6번 출구에서 161m' },
+  ],
+  intro:   '솔과 밤비가 여는\n포트럭 크리스마스 파티에 초대합니다!',
+  when:    '2026. 12. 12 (토)<br>저녁 7:00 – 밤 11:30',
+  where:   '서울 강남구 압구정로50길 지하1층 21호<small>압구정로데오역 6번 출구에서 161m</small>',
+  address: '서울 강남구 압구정로50길 지하1층 21호',
+  potluck: '', // TODO 포트럭 안내 문구 (비워 두면 "곧 알려드릴게요"로 표시)
+  rsvpUrl: '', // TODO 참석 회신 링크 (비워 두면 버튼 숨김)
+  mapUrl:  'https://map.naver.com/p/search/' + encodeURIComponent('서울 강남구 압구정로50길'),
+};
+</script>
+<script src="sprites.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
