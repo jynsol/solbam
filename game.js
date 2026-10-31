@@ -9,19 +9,19 @@ const pick = a => a[Math.floor(Math.random() * a.length)];
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map(v => (v + 0.5) / 16);
 const bay = (x, y) => BAYER[(x & 3) + ((y & 3) << 2)];
-const LW = 160; let LH = 320, GY = 205;
+const LW = 120; let LH = 240, GY = 154;
 const darkCv = mkCanvas(1, 1), darkCtx = darkCv.getContext('2d');
 let darkImg, lightBuf, skyCv = mkCanvas(1, 1), groundCv = mkCanvas(1, 1);
 
 /* ---------- 세계 배치 ---------- */
 const EV = [{ x: 240, type: 'ginger' }, { x: 500, type: 'snow' }, { x: 760, type: 'elf' }];
-const SOL_X = 630, END_X = 966, TREE_X = END_X + 78;
+const SOL_X = 630, END_X = 966, TREE_X = END_X + 56;
 const AMB = [0.84, 0.72, 0.6, 0.48];
 const LIT_LIMIT = [EV[1].x + 30, EV[2].x + 30, TREE_X - 50];
 
 function resize() {
   const r = app.getBoundingClientRect();
-  LH = clamp(R(LW * r.height / r.width), 240, 400);
+  LH = clamp(R(LW * r.height / r.width), 180, 300);
   cv.width = LW; cv.height = LH; GY = R(LH * 0.64);
   darkCv.width = LW; darkCv.height = LH; darkImg = darkCtx.createImageData(LW, LH);
   for (let i = 0; i < LW * LH; i++) { darkImg.data[i * 4] = 9; darkImg.data[i * 4 + 1] = 11; darkImg.data[i * 4 + 2] = 24; }
@@ -95,7 +95,7 @@ let FAR = [], MID = [], NEAR = [], farV = [], midV = [], PROPS = [], BUN = [];
 const BIG = { tree: null, lit: false, star: false };
 const TREE_IMG = {};
 function loadImgs() {
-  return Promise.all(['tree_big', 'tree_mid', 'tree_r', 'tree_s1', 'tree_s2', 'pine_s', 'bush1', 'bush2', 'bush3', 'grass', 'mush', 'log', 'bunny'].map(n => new Promise(res => {
+  return Promise.all(['pine_s', 'bush1', 'bush2', 'bush3', 'grass', 'mush', 'log', 'bunny', 'player', 'sol', 'bambi', 'en_fuzz', 'en_slime', 'en_mush', 'guests'].map(n => new Promise(res => {
     const im = new Image(); im.onload = () => { TREE_IMG[n] = im; res(); }; im.onerror = () => res(); im.src = 'img/' + n + '.png';
   })));
 }
@@ -120,21 +120,95 @@ function treeFromImg(img, o = {}) {
   });
   return { cv: c, ax, h: h + 2, bulbs, rows, w };
 }
+
+/* ---------- 나무 생성기 (외곽선 + 3단 음영 + 눈) ---------- */
+function rng32(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const TPAL = [
+  { l: '#62a676', m: '#3f805c', d: '#285a42', ol: '#13261d' },
+  { l: '#55a197', m: '#357f76', d: '#225c58', ol: '#112a29' },
+  { l: '#6494a8', m: '#45738a', d: '#2f5468', ol: '#15263a' },
+  { l: '#80ad66', m: '#5a8a4e', d: '#3d643a', ol: '#1b2a1a' },
+];
+function genTree(o) {
+  const r = rng32(o.seed || 1), h = o.h, w = o.w, W = w + 6, H = h + 4, cx = Math.floor(W / 2);
+  const M = new Uint8Array(W * H); // 1 밝음 2 중간 3 어둠 4 줄기 5 줄기어둠 6 눈 7 눈그늘
+  const set = (x, y, v) => { if (x >= 0 && y >= 0 && x < W && y < H) M[y * W + x] = v; };
+  const get = (x, y) => (x < 0 || y < 0 || x >= W || y >= H) ? 0 : M[y * W + x];
+  const trunkH = o.type === 'bare' ? 0 : Math.max(4, Math.round(h * 0.14)), fh = h - trunkH, tk = Math.max(1, Math.round(w / 22)), tw = tk * 2 + 1;
+  if (o.type === 'bare') {
+    const th = h; for (let y = Math.round(h * 0.15); y < th; y++) { const ww = 1 + Math.floor((y / th) * tw); for (let x = -ww; x <= ww; x++) set(cx + x, y, x > 0 ? 5 : 4); }
+    const nb = 4 + Math.floor(r() * 3);
+    for (let i = 0; i < nb; i++) {
+      const y0 = Math.round(h * (0.2 + 0.6 * i / nb)), dir = i % 2 ? 1 : -1, len = Math.round(w * (0.25 + r() * 0.2));
+      for (let k = 0; k < len; k++) { const x = cx + dir * k, y = y0 - Math.round(k * (0.5 + r() * 0.3)); set(x, y, 4); if (k > len * 0.5 && r() < 0.5) set(x + dir, y - 2, 4); }
+    }
+  } else {
+    const tiers = o.tiers || Math.max(3, Math.min(7, Math.round(fh / (o.type === 'spruce' ? 9 : 13)))), th = fh / tiers;
+    for (let t = 0; t < tiers; t++) {
+      const y0 = Math.round(t * th * 0.92), y1 = Math.round((t + 1) * th + 2), hwTop = Math.max(1, (w / 2) * (0.12 + 0.88 * t / tiers) * 0.35), hwBot = (w / 2) * (0.25 + 0.75 * (t + 1) / tiers);
+      for (let y = y0; y < Math.min(y1, fh + 1); y++) {
+        const u = (y - y0) / Math.max(1, y1 - y0);
+        let hw = o.type === 'round' ? hwTop + (hwBot - hwTop) * Math.sin(u * Math.PI / 2) : hwTop + (hwBot - hwTop) * u;
+        hw = Math.round(hw + (r() < 0.25 ? 1 : 0));
+        for (let x = -hw; x <= hw; x++) {
+          if (y >= y1 - 2 && Math.abs(x) > hw * 0.5 && ((x + y + t) % 3 === 0)) continue; // 가지 끝 톱니
+          const v = x < -hw * 0.3 ? 1 : x > hw * 0.35 || y > y1 - 3 ? 3 : 2;
+          set(cx + x, y, v);
+        }
+      }
+    }
+    for (let y = fh - 2; y < h; y++) for (let x = -tk; x <= tk; x++) if (y >= fh || !get(cx + x, y)) set(cx + x, y, x > 0 ? 5 : 4);
+    for (let y = fh - 2; y < fh; y++) for (let x = -tk; x <= tk; x++) if (get(cx + x, y) && get(cx + x, y) < 4 && y === fh - 1) set(cx + x, y, 3);
+  }
+  // 눈: 윗면 1~2px
+  for (let x = 0; x < W; x++) for (let y = 1; y < H; y++) {
+    const v = get(x, y); if (!v || get(x, y - 1)) continue;
+    if (v >= 4 && v <= 5 && o.type !== 'bare') continue; if (y + 1 < H && get(x, y + 1)) { set(x, y + 1, 6); if (get(x, y + 2) && get(x, y + 2) < 4 && r() < (o.snowy ? 0.85 : 0.55)) set(x, y + 2, 7); }
+  }
+  // 그리기 + 테두리 외곽선
+  const c = mkCanvas(W, H), g = c.getContext('2d'), p = o.pal, cols = [null, p.l, p.m, p.d, '#7a5236', '#523624', '#eef6fc', '#b8d0e6'];
+  const rows = [];
+  for (let y = 0; y < H; y++) {
+    let L = -1, Rr = -1;
+    for (let x = 0; x < W; x++) {
+      const v = get(x, y); if (!v) continue; if (L < 0) L = x; Rr = x;
+      const trunk = v === 4 || v === 5, edge = trunk ? (!get(x - 1, y) || !get(x + 1, y) || y === H - 1 || !get(x, y + 1)) : (!get(x - 1, y) || !get(x + 1, y) || !get(x, y - 1) || !get(x, y + 1));
+      g.fillStyle = edge ? (trunk ? '#2a1a14' : p.ol) : (trunk && x === cx ? '#8a5e3c' : cols[v]); g.fillRect(x, y, 1, 1);
+    }
+    rows.push([L, Rr]);
+  }
+  const bulbs = [];
+  if (o.bulbs && o.type !== 'bare') o.bulbs.forEach(t => {
+    const y = Math.floor(t * (H - 4)), [L, Rr] = rows[y] || [-1, -1]; if (L < 0 || Rr - L < 6) return;
+    const n = Math.max(2, Math.round((Rr - L) / (o.gap || 6)));
+    for (let j = 0; j < n; j++) { const u = j / (n - 1), x = Math.round(L + 2 + u * (Rr - L - 4)); bulbs.push({ lx: x - cx, ly: y + Math.round((1 - (2 * u - 1) ** 2) * 2) - H }); }
+  });
+  return { cv: c, ax: cx, h: H, bulbs, rows, w: W };
+}
+function randTree(seed, opt = {}) {
+  const r = rng32(seed * 9973 + 7), roll = r();
+  const type = opt.type || (roll < 0.45 ? 'pine' : roll < 0.7 ? 'spruce' : roll < 0.9 ? 'round' : 'bare');
+  const h = opt.h || Math.round(type === 'spruce' ? 40 + r() * 50 : type === 'bare' ? 30 + r() * 30 : 24 + r() * 60);
+  const w = opt.w || Math.round(type === 'spruce' ? h * (0.35 + r() * 0.12) : type === 'round' ? h * (0.6 + r() * 0.15) : h * (0.5 + r() * 0.15));
+  return genTree({ type, h, w, seed, pal: opt.pal || TPAL[Math.floor(r() * TPAL.length)], snowy: r() < 0.6, bulbs: opt.nobulb ? null : [0.3, 0.5, 0.7, 0.85].slice(0, h > 50 ? 4 : 3) });
+}
 const TINTS = [null, [0.82, 0.9, 1.0], [0.7, 0.86, 0.96]];
 function buildWorld() {
+  const _r = Math.random; Math.random = rng32(20261212);
+  try { buildWorldInner(); } finally { Math.random = _r; }
+}
+function buildWorldInner() {
   farV = [];
   for (let i = 0; i < 5; i++) farV.push(makePine(irand(38, 58), irand(24, 34), PAL_FAR));
-  midV = [];
-  for (const n of ['tree_s1', 'tree_s2', 'tree_mid', 'tree_r']) for (const flip of [false, true]) if (TREE_IMG[n]) midV.push(treeFromImg(TREE_IMG[n], { flip, tint: [0.42, 0.52, 0.68] }));
-  if (!midV.length) for (let i = 0; i < 5; i++) midV.push(makePine(irand(48, 68), irand(30, 40), PAL_MID));
+  midV = []; const SIL = { l: '#2a3a52', m: '#22324a', d: '#1c2a40', ol: '#141d2e' };
+  for (let i = 0; i < 10; i++) midV.push(randTree(500 + i, { pal: SIL, nobulb: true, h: irand(28, 60) }));
   FAR = []; for (let x = -20; x < 640; x += irand(9, 16)) FAR.push({ x, v: irand(0, farV.length - 1), dy: irand(0, 5) });
   MID = []; for (let x = -20; x < 1100; x += irand(14, 24)) MID.push({ x, v: irand(0, midV.length - 1), dy: irand(0, 6) });
-  NEAR = [];
-  const pool = ['tree_mid', 'tree_r', 'tree_mid', 'tree_r', 'tree_s1', 'tree_s2', 'tree_big'].filter(n => TREE_IMG[n]);
-  for (let x = -40; x < TREE_X - 90;) {
-    const n = pick(pool), tr = TREE_IMG[n] ? treeFromImg(TREE_IMG[n], { flip: Math.random() < 0.5, tint: pick(TINTS), tiers: n === 'tree_big' ? [0.3, 0.45, 0.6, 0.75] : [0.35, 0.55, 0.75] }) : makePine(irand(62, 92), irand(38, 52), PAL_NEAR);
-    NEAR.push({ x: x + irand(-4, 4), pine: tr, bulbs: tr.bulbs.map((b, i) => ({ ...b, col: WARM[(i * 3 + NEAR.length) % WARM.length], on: false, at: 0, seed: rand(0, 6.28) })) });
-    x += Math.max(22, Math.round((tr.w || 40) * 0.75)) + irand(4, 16);
+  NEAR = []; let seed = 1;
+  for (let x = -40; x < TREE_X - 70;) {
+    const tr = randTree(seed++);
+    NEAR.push({ x: x + irand(-3, 3), pine: tr, bulbs: tr.bulbs.map((b, i) => ({ ...b, col: WARM[(i * 3 + NEAR.length) % WARM.length], on: false, at: 0, seed: rand(0, 6.28) })) });
+    x += Math.max(14, Math.round(tr.w * 0.7)) + irand(2, 14);
   }
   PROPS = [];
   const pp = ['grass', 'grass', 'bush1', 'bush2', 'bush3', 'log', 'mush', 'pine_s'].filter(n => TREE_IMG[n]);
@@ -144,25 +218,35 @@ function buildWorld() {
   BIG.tree = makeBigTree();
 }
 function makeBigTree() {
-  if (!TREE_IMG.tree_big) { const p = makePine(118, 90, PAL_NEAR, 5); return { ...p, bulbs: p.bulbs.map(b => ({ ...b, col: pick(WARM), on: false, at: 0, seed: rand(0, 6.28) })), orn: [], top: -p.h + 1 }; }
-  const p = treeFromImg(TREE_IMG.tree_big, { tiers: [0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8], gap: 6 });
+  const p = genTree({ type: 'pine', h: 104, w: 74, tiers: 6, seed: 42, pal: TPAL[0], snowy: true, bulbs: [0.22, 0.32, 0.42, 0.52, 0.62, 0.72, 0.82], gap: 5 });
   const orn = [];
-  [0.25, 0.35, 0.45, 0.55, 0.65, 0.75].forEach(t => {
-    const r = Math.floor(t * (p.h - 2)) + 3, [L, Rr] = p.rows[r]; if (L < 0) return;
-    for (let j = 0; j < 2; j++) orn.push({ lx: irand(L + 3, Rr - 4) - p.ax, ly: r - p.h, col: pick(['#d8394a', '#d8394a', '#ffd25e', '#e8f4fc']) });
+  [0.28, 0.38, 0.48, 0.58, 0.68, 0.78].forEach(t => {
+    const y = Math.floor(t * (p.h - 4)) + 3, [L, Rr] = p.rows[y] || [-1, -1]; if (L < 0) return;
+    for (let j = 0; j < 2; j++) orn.push({ lx: irand(L + 3, Rr - 4) - p.ax, ly: y - p.h, col: pick(['#d8394a', '#d8394a', '#ffd25e', '#e8f4fc']) });
   });
   return { ...p, bulbs: p.bulbs.map((b, j) => ({ ...b, col: WARM[j % WARM.length], on: false, at: 0, seed: rand(0, 6.28) })), orn, top: -p.h + 1 };
 }
 
 /* ---------- 상태 ---------- */
-const ELF_L = (() => { const c = mkCanvas(24, ELF_SET.idle.height), g = c.getContext('2d'); g.translate(24, 0); g.scale(-1, 1); g.drawImage(ELF_SET.idle, 0, 0); return c; })();
+const CH = {}, EN = {};
+let GUESTF = [], GUESTS = [];
+function cells(img, n) { const w = img.width / n, out = []; for (let i = 0; i < n; i++) { const c = mkCanvas(w, img.height); c.getContext('2d').drawImage(img, i * w, 0, w, img.height, 0, 0, w, img.height); out.push(c); } return out; }
+function toCanvas(img) { const c = mkCanvas(img.width, img.height); c.getContext('2d').drawImage(img, 0, 0); return c; }
+function setupSprites() {
+  for (const k of ['player', 'sol', 'bambi']) {
+    const F = cells(TREE_IMG[k], 12);
+    CH[k] = { F, front: F[0], idle: F[0], walkA: F[4], walkB: F[6], wind: F[6], swing: F[7], cheer: F[11] };
+  }
+  EN.fuzz = toCanvas(TREE_IMG.en_fuzz); EN.slime = toCanvas(TREE_IMG.en_slime); EN.mush = toCanvas(TREE_IMG.en_mush);
+  GUESTF = cells(TREE_IMG.guests, 8);
+}
 const S = {
   mode: 'title', cam: 0, camLock: null, amb: 0.3, pieces: 0, holding: false, walkTo: 0, walkRes: null, tapRes: null,
   T: 0, freeze: 0, ts: 1, shakeT: 0, shakeM: 0, flash: 0, flashC: '#fff', sx: 0, sy: 0, hudFlash: [0, 0, 0], hud: false,
 };
 const player = { x: 24, atk: null, queued: false, combo: 0, walkT: 0, moving: false, cheer: false, lunge: 0, visible: false };
 const bambi = { x: -100, oy: 0, visible: false, moving: false, walkT: 0, guide: false };
-const sol = { x: TREE_X - 38, visible: false, cheer: false };
+const sol = { x: TREE_X - 30, visible: false, cheer: false };
 let look = { hair: 0, hat: 0, outfit: 0, skin: 1, name: '' };
 let PF = null, enemy = null, item = null;
 let P = [], SLASH = [], VL = [], RAYS = [], FOOT = [], FLAKES = [], timers = [], tweens = [];
@@ -223,7 +307,7 @@ const flareP = (x, y, L, life, delay) => part({ k: 'flare', x, y, L, life, emit:
 const rays = (x, y, n, len, life, col) => RAYS.push({ x, y, n, len, life, max: life, col: col || '#ffd76a', rot: rand(0, 6) });
 function debris(type, x, y, n) {
   for (let i = 0; i < n; i++) { const a = rand(-2.6, -0.4), v = rand(30, 80);
-    const cols = type === 'ginger' ? [pick(['#c97b3d', '#97542a', '#fff6ea'])] : type === 'snow' ? [pick(['#f6f9ff', '#b8c8e8', '#ffffff'])] : [pick(['#3fa66a', '#ffd25e', '#e8742e'])];
+    const cols = type === 'ginger' ? [pick(['#2a2438', '#4a4366', '#e0414f'])] : type === 'snow' ? [pick(['#4fd1b5', '#2a9c8a', '#c8fff0'])] : [pick(['#e0414f', '#fff6ea', '#4cbb72'])];
     part({ k: 'px', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, g: 220, drag: 0.98, life: rand(0.6, 1.1), cols, ground: true, bounce: 0.3 }); }
 }
 function snowPowder(x, y, n) { for (let i = 0; i < n; i++) part({ k: 'px', x: x + rand(-8, 8), y: y + rand(-12, 8), vx: rand(-40, 40), vy: rand(-50, 0), g: 12, drag: 0.92, life: rand(1.4, 2.6), cols: ['#ffffff', '#e6edff', '#b9c4ef'], wob: rand(2, 5) }); }
@@ -231,9 +315,9 @@ function puff(x, y, n) { for (let i = 0; i < n; i++) { const a = rand(0, 6.28), 
 
 /* ---------- 전투 ---------- */
 const ENEMY = {
-  ginger: { sp: () => GINGER, hp: 4, name: '진저브레드맨', line: '잡아 봐라~ 못 잡지롱!' },
-  snow:   { sp: () => SNOWMAN, hp: 5, name: '눈사람', line: '여기는… 못… 지나간다…' },
-  elf:    { sp: () => ELF_L, hp: 6, name: '장난꾸러기 엘프', line: '히히, 들켰다!\n그래도 초대장은 못 줘!' },
+  ginger: { sp: () => EN.fuzz, hp: 4, name: '털뭉치', line: '보들보들~ 이건 내 거야!' },
+  snow:   { sp: () => EN.slime, hp: 5, name: '말랑 슬라임', line: '말랑말랑… 여긴 못 지나가~' },
+  elf:    { sp: () => EN.mush, hp: 6, name: '장난꾸러기 버섯', line: '히히, 들켰다!\n그래도 초대장은 못 줘!' },
 };
 function spawnEnemy(i) {
   const e = EV[i], d = ENEMY[e.type], sp = d.sp();
@@ -246,13 +330,13 @@ function startAttack() {
   player.atk = { t: 0, kind: player.combo, slash: false, hit: false, fin: enemy.hp === 1 };
 }
 function spawnSlash(kind, fin) {
-  const cx = player.x + 9, cy = GY - 11;
+  const cx = player.x + 5, cy = GY - 9;
   if (fin) {
-    SLASH.push({ x: cx + 3, y: cy - 2, r1: 9, r2: 32, a0: -2.1, a1: 1.2, t: 0, dur: 0.12, big: true });
-    SLASH.push({ x: cx + 3, y: cy - 2, r1: 9, r2: 32, a0: 2.0, a1: -1.3, t: -0.06, dur: 0.12, big: true });
-  } else if (kind === 1) SLASH.push({ x: cx, y: cy, r1: 8, r2: 22, a0: 1.3, a1: -1.7, t: 0, dur: 0.1 });
-  else if (kind === 2) SLASH.push({ x: cx, y: cy, r1: 7, r2: 26, a0: -2.4, a1: 1.1, t: 0, dur: 0.11, big: true });
-  else SLASH.push({ x: cx, y: cy, r1: 8, r2: 22, a0: -1.9, a1: 1.0, t: 0, dur: 0.1 });
+    SLASH.push({ x: cx + 3, y: cy - 2, r1: 6, r2: 22, a0: -2.1, a1: 1.2, t: 0, dur: 0.12, big: true });
+    SLASH.push({ x: cx + 3, y: cy - 2, r1: 6, r2: 22, a0: 2.0, a1: -1.3, t: -0.06, dur: 0.12, big: true });
+  } else if (kind === 1) SLASH.push({ x: cx, y: cy, r1: 5, r2: 15, a0: 1.3, a1: -1.7, t: 0, dur: 0.1 });
+  else if (kind === 2) SLASH.push({ x: cx, y: cy, r1: 5, r2: 18, a0: -2.4, a1: 1.1, t: 0, dur: 0.11, big: true });
+  else SLASH.push({ x: cx, y: cy, r1: 5, r2: 15, a0: -1.9, a1: 1.0, t: 0, dur: 0.1 });
 }
 function hitPoint() { return { x: enemy.x - enemy.w * 0.2, y: GY - enemy.h * 0.55 + enemy.oy }; }
 function doHit(a) {
@@ -332,8 +416,7 @@ function update(rdt) {
         if (e.type === 'ginger') { dissolve('crumble'); e.alpha = 0; }
         else if (e.type === 'snow') {
           dissolve('burst'); snowPowder(e.x, GY - 14, 60); e.alpha = 0;
-          part({ k: 'carrot', x: e.x - 6, y: GY - 14, vx: -50, vy: -120, g: 260, life: 2.2, ground: true, bounce: 0.35, rot: 0, vr: 18 });
-          part({ k: 'hat', x: e.x, y: GY - 22, vx: 30, vy: -150, g: 260, life: 2.2, ground: true, bounce: 0.3, rot: 0, vr: -10 });
+          for (let k = 0; k < 24; k++) part({ k: 'px', x: e.x + rand(-6, 6), y: GY - 8, vx: rand(-70, 70), vy: rand(-110, -30), g: 240, life: rand(0.6, 1.1), cols: [pick(['#4fd1b5', '#2a9c8a', '#c8fff0'])], ground: true, bounce: 0.2 });
         } else { e.state = 'knocked'; e.kb = 0; e.kbv = 90; }
         if (e.res) { const r = e.res; e.res = null; setTimeout(r, 0); }
       }
@@ -342,7 +425,7 @@ function update(rdt) {
   }
 
   if (bambi.guide) {
-    const target = Math.min(player.x + 120, TREE_X + 34);
+    const target = Math.min(player.x + 92, TREE_X + 30);
     if (bambi.x < target - 1) { bambi.x += Math.min(72 * dt, target - bambi.x); bambi.moving = true; bambi.walkT += dt; } else bambi.moving = false;
   }
 
@@ -456,9 +539,15 @@ function render() {
     const y = R(GY - BI.height + 1 + oy + b.jy + [0, -5, -3, 0][b.f]);
     ctx.save(); if (b.dir < 0) { ctx.translate(xx + cw, y); ctx.scale(-1, 1); ctx.drawImage(BI, b.f * cw, 0, cw, BI.height, 0, 0, cw, BI.height); } else ctx.drawImage(BI, b.f * cw, 0, cw, BI.height, xx, y, cw, BI.height); ctx.restore();
   } }
+  for (const q of GUESTS) {
+    if (S.T < q.at) continue;
+    if (!q.shown) { q.shown = true; puff(q.x, GY - 6, 6); burstTwinkle(q.x, GY - 10, 6, 30, ['#ffd76a', '#fff']); }
+    const hop = Math.max(0, Math.sin(S.T * 4 + q.seed)) * 2;
+    drawSp(q.c, q.x - q.c.width / 2 - cam, GY - q.c.height + 1 + oy - R(hop));
+  }
   drawParts(false, cam, oy);
-  if (sol.visible) { const sp = sol.cheer && (T * 4 | 0) % 2 ? SOL.cheer : SOL.front; drawSp(sp, sol.x - 12 - cam, feetY(sp) + oy - ((T * 1.5 | 0) % 2)); }
-  if (bambi.visible) { const sp = bambi.moving ? ((bambi.walkT * 8 | 0) % 2 ? BAMBI.walkA : BAMBI.walkB) : bambi.cheer && (T * 4 | 0) % 2 ? BAMBI.cheer : BAMBI.front; drawSp(sp, bambi.x - 12 - cam, feetY(sp) + oy + bambi.oy - (bambi.moving ? (bambi.walkT * 8 | 0) % 2 : 0), bambi.moving && bambi.left); }
+  if (sol.visible) { const sp = sol.cheer && (T * 4 | 0) % 2 ? CH.sol.cheer : CH.sol.F[(T * 2 | 0) % 4]; drawSp(sp, sol.x - 8 - cam, feetY(sp) + oy - ((T * 1.5 | 0) % 2)); }
+  if (bambi.visible) { const sp = bambi.moving ? CH.bambi.F[4 + (bambi.walkT * 8 | 0) % 4] : bambi.cheer && (T * 4 | 0) % 2 ? CH.bambi.cheer : CH.bambi.F[(T * 2 | 0) % 4]; drawSp(sp, bambi.x - 8 - cam, feetY(sp) + oy + bambi.oy, bambi.moving && bambi.left); }
   if (enemy && enemy.alpha > 0) drawEnemy(cam, oy);
   if (player.visible && PF) drawPlayer(cam, oy);
   if (item && item.visible) { const bob = item.fly ? 0 : R(Math.sin(item.t * 4) * 1.5); drawSp(item.sp, item.x - item.sp.width / 2 - cam, item.y - item.sp.height / 2 + bob + oy); }
@@ -466,10 +555,10 @@ function render() {
   if (BIG.star) drawSp(STAR, starX - 5, starY - 6);
 
   // 빛
-  if (player.visible && S.mode !== 'custom') addL(player.x - cam, GY - 16 + oy, 48 + S.pieces * 9, 1);
+  if (player.visible && S.mode !== 'custom') addL(player.x - cam, GY - 12 + oy, 38 + S.pieces * 7, 1);
   if (S.mode === 'custom') addL(LW / 2, LH * 0.25, 70, 1.2);
-  if (enemy && enemy.alpha > 0) addL((player.x + enemy.x) / 2 - cam, GY - 18 + oy, 70, 0.55);
-  const noseX = bambi.x - 12 - cam + (bambi.moving ? (bambi.left ? 10 : 13.5) : 11.5), noseY = feetY(BAMBI.front) + 16 + oy;
+  if (enemy && enemy.alpha > 0) addL((player.x + enemy.x) / 2 - cam, GY - 12 + oy, 54, 0.55);
+  const noseX = bambi.x - 8 - cam + 8.5, noseY = GY - 24 + 12.5 + oy;
   if (bambi.visible) addL(noseX, noseY, 28, 0.75 + 0.15 * Math.sin(T * 5));
   for (let i = 0; i < lit.length; i += 3) { const b = lit[i + 2]; addL(lit[i], lit[i + 1], BIG.lit ? 14 : 11, 0.42 * (0.8 + 0.2 * Math.sin(T * 3 + b.seed))); }
   for (const v of VL) addL(v.x - cam, v.y + oy, v.r, v.i * (v.life / v.max));
@@ -479,7 +568,7 @@ function render() {
 
   // 발광
   drawGlow(mx, my, 22, '#3a3a5e', 1);
-  if (player.visible && S.mode !== 'custom') drawGlow(player.x - cam, GY - 16 + oy, 22, '#2a2212', 0.8);
+  if (player.visible && S.mode !== 'custom') drawGlow(player.x - cam, GY - 12 + oy, 16, '#2a2212', 0.8);
   for (let i = 0; i < lit.length; i += 3) {
     const b = lit[i + 2], tw = Math.sin(T * 3 + b.seed), age = T - b.at;
     ctx.fillStyle = b.col; ctx.fillRect(lit[i], lit[i + 1], 1, 1);
@@ -487,7 +576,7 @@ function render() {
     drawGlow(lit[i], lit[i + 1], 4, b.col, 0.6 + 0.3 * tw);
     if (age < 0.25) flareAt(lit[i], lit[i + 1], R(5 * (1 - age / 0.25)) + 1, '#fff', b.col);
   }
-  if (bambi.visible) { drawGlow(noseX, noseY, 7, '#ff3344', 0.85 + 0.15 * Math.sin(T * 5)); }
+  if (bambi.visible) { drawGlow(noseX, noseY, 5, '#ff3344', 0.85 + 0.15 * Math.sin(T * 5)); }
   if (item && item.visible) { const bob = item.fly ? 0 : R(Math.sin(item.t * 4) * 1.5); drawGlow(item.x - cam, item.y + oy + bob, 13, '#ffcf6a', 0.8); if ((item.t * 6 | 0) % 3 === 0) sparkle(item.x - cam + 6, item.y - 5 + oy + bob, '#fff', 1); }
   if (BIG.star) { drawGlow(starX, starY, BIG.lit ? 24 : 13, '#ffcf6a', 0.9); if (BIG.lit) flareAt(starX, starY, 7 + R(Math.sin(T * 4) * 2), '#fff', '#ffe08a'); }
   drawRays(cam, oy);
@@ -499,20 +588,14 @@ function render() {
   if (S.flash > 0) { ctx.globalAlpha = Math.min(1, S.flash); ctx.fillStyle = S.flashC; ctx.fillRect(0, 0, LW, LH); ctx.globalAlpha = 1; }
 }
 function drawPlayer(cam, oy) {
-  if (S.mode === 'custom') {
-    const sc = 3, w = PF.front.width * sc, h = PF.front.height * sc, x = R(LW / 2 - w / 2), y = R(LH * 0.25 - h / 2) + ((S.T * 2 | 0) % 2 ? 0 : -sc);
-    ctx.fillStyle = 'rgba(14,18,32,.45)'; ctx.fillRect(x + 12, R(LH * 0.25 + h / 2) + 1, w - 24, 4);
-    ctx.drawImage(PF.front, x, y, w, h); return;
-  }
-  let sp = PF.idle, bob = 0; const a = player.atk;
-  if (a) sp = a.t < 0.045 ? PF.wind : a.t < 0.17 ? PF.swing : PF.idle;
-  else if (player.cheer) sp = PF.cheer;
-  else if (player.moving) { const f = (player.walkT * 8 | 0) % 4; sp = f === 0 ? PF.walkA : f === 2 ? PF.walkB : PF.idle; bob = f % 2 ? 0 : -1; }
-  else bob = (S.T * 1.5 | 0) % 2 ? 0 : -1 * 0;
-  const x = player.x - 12 - cam + player.lunge, y = feetY(sp) + oy + bob;
-  if (a && a.t < 0.045) cane(x, y, [[20, 17], [20, 16], [19, 15], [19, 14], [19, 13], [18, 12], [18, 11], [18, 10], [18, 9], [19, 8], [20, 8], [21, 9], [21, 10]]);
+  const F = PF.F; let sp = F[(S.T * 2 | 0) % 4]; const a = player.atk;
+  if (a) sp = a.t < 0.045 ? F[6] : a.t < 0.17 ? F[7] : F[0];
+  else if (player.cheer) sp = F[11];
+  else if (player.moving) sp = F[4 + (player.walkT * 9 | 0) % 4];
+  const x = player.x - 8 - cam + player.lunge, y = feetY(sp) + oy;
+  if (a && a.t < 0.045) cane(x, y, [[4, 17], [4, 16], [3, 15], [3, 14], [2, 13], [2, 12], [2, 11], [3, 10], [4, 10], [5, 11]]);
   drawSp(sp, x, y);
-  if (a && a.t >= 0.045 && a.t < 0.17) cane(x, y, [[23, 23], [24, 23], [25, 23], [26, 23], [27, 23], [28, 23], [29, 23], [30, 23], [31, 22], [32, 22], [33, 23], [33, 24]]);
+  if (a && a.t >= 0.045 && a.t < 0.17) cane(x, y, [[13, 18], [14, 18], [15, 18], [16, 18], [17, 18], [18, 18], [19, 17], [20, 17], [21, 18], [21, 19]]);
 }
 function cane(x, y, pts) { pts.forEach(([px, py], i) => { ctx.fillStyle = (i >> 1) % 2 ? '#e8344a' : '#ffffff'; ctx.fillRect(R(x + px), R(y + py), 1, 1); }); }
 function drawEnemy(cam, oy) {
@@ -521,7 +604,7 @@ function drawEnemy(cam, oy) {
   const x = e.x - e.w / 2 - cam + e.kb + sx, y = GY - e.h + 1 + oy + bob + e.oy;
   if (e.clip > 0) { ctx.save(); ctx.beginPath(); ctx.rect(x - 6, 0, e.w + 12, GY + 1 + oy); ctx.clip(); drawSp(e.sp, x, y + e.clip); ctx.restore(); }
   else drawSp(e.flash > 0 ? whiteOf(e.sp) : e.sp, x, y, false, e.alpha < 1 ? e.alpha : null);
-  if (e.type === 'snow') { const by = y + e.clip, w = R(Math.sin(e.t * 3) * 1.5); line(x + 3, by + 14, x - 2, by + 10 + w, '#6b4128'); line(x - 2, by + 10 + w, x - 4, by + 8 + w, '#6b4128'); line(x + 17, by + 14, x + 22, by + 10 - w, '#6b4128'); line(x + 22, by + 10 - w, x + 24, by + 9 - w, '#6b4128'); }
+
   if (e.dizzy) for (let i = 0; i < 3; i++) { const an = S.T * 5 + i * 2.09; sparkle(x + 12 + Math.cos(an) * 9, y + 8 + Math.sin(an) * 2, '#ffd25e', 1); }
 }
 function drawHearts(cam, oy) {
@@ -591,9 +674,11 @@ const dlg = $('#dlg'), dlgN = $('#dlgName'), dlgT = $('#dlgText'), dlgX = $('#dl
 let dlgState = null;
 function portrait(name) {
   const g = dlgP.getContext('2d'); g.clearRect(0, 0, 22, 22); g.imageSmoothingEnabled = false;
-  const src = { '밤비': [BAMBI.front, 1, 1], '솔': [SOL.front, 1, 1], '솔 & 밤비': [SOL.cheer, 1, 1], '진저브레드맨': [GINGER, -1, 0], '눈사람': [SNOWMAN, 1, 0], '장난꾸러기 엘프': [ELF_SET.front, 1, 7] }[name];
-  if (name === '???') { g.drawImage(SOL.front, 1, 1, 22, 22, 0, 0, 22, 22); g.globalCompositeOperation = 'source-in'; g.fillStyle = '#3c4566'; g.fillRect(0, 0, 22, 22); g.globalCompositeOperation = 'source-over'; g.fillStyle = '#ffd25e'; g.fillRect(9, 12, 2, 2); g.fillRect(14, 12, 2, 2); return; }
-  if (src) g.drawImage(src[0], src[1], src[2], 22, 22, 0, 0, 22, 22);
+  const src = { '밤비': CH.bambi.F[0], '솔': CH.sol.F[0], '솔 & 밤비': CH.sol.cheer, '털뭉치': EN.fuzz, '말랑 슬라임': EN.slime, '장난꾸러기 버섯': EN.mush, '???': CH.sol.F[0] }[name];
+  if (!src) return;
+  const h = Math.min(22, src.height), dx = R((22 - src.width) / 2);
+  g.drawImage(src, 0, 0, src.width, h, dx, R((22 - h) / 2) + 1, src.width, h);
+  if (name === '???') { g.globalCompositeOperation = 'source-in'; g.fillStyle = '#3c4566'; g.fillRect(0, 0, 22, 22); g.globalCompositeOperation = 'source-over'; }
 }
 function say(name, text) {
   return new Promise(res => {
@@ -649,25 +734,25 @@ function setScene(kind) {
   if (kind === 'title') {
     S.camLock = TREE_X - LW / 2; S.cam = S.camLock; S.amb = 0.3; BIG.lit = true; BIG.star = true;
     BIG.tree.bulbs.forEach(b => { b.on = true; b.at = 0; }); NEAR.forEach(t => t.bulbs.forEach(b => { b.on = true; b.at = 0; }));
-    sol.visible = true; bambi.visible = true; bambi.x = TREE_X + 34; player.visible = false;
+    sol.visible = true; bambi.visible = true; bambi.x = TREE_X + 30; player.visible = false; spawnGuests(true);
   } else {
-    S.camLock = null; BIG.lit = false; BIG.star = false;
+    S.camLock = null; BIG.lit = false; BIG.star = false; GUESTS = [];
     BIG.tree.bulbs.forEach(b => { b.on = false; }); NEAR.forEach(t => t.bulbs.forEach(b => { b.on = false; }));
     sol.visible = true; bambi.visible = false; player.x = 30; S.cam = player.x - LW * 0.34;
   }
 }
 function startGame() {
-  $('#title').classList.add('hide'); PF = buildPlayer(look); player.visible = true; runGame();
+  $('#title').classList.add('hide'); PF = CH.player; player.visible = true; runGame();
 }
-$('#quick').addEventListener('click', e => { e.stopPropagation(); PF = buildPlayer(look); $('#title').classList.add('hide'); showCard(); });
+$('#quick').addEventListener('click', e => { e.stopPropagation(); PF = CH.player; $('#title').classList.add('hide'); showCard(); });
 
 /* ---------- 이야기 ---------- */
 async function runGame() {
   setScene('game'); S.mode = 'cutscene'; S.hud = true; S.amb = AMB[0]; S.pieces = 0;
   await wait(500);
-  bambi.visible = true; bambi.moving = true; bambi.left = true; const sx = S.cam + LW + 16, tx = player.x + 30;
+  bambi.visible = true; bambi.moving = true; bambi.left = true; const sx = S.cam + LW + 14, tx = player.x + 24;
   await tween(1.1, p => { bambi.x = sx + (tx - sx) * p; bambi.walkT += 0.03; });
-  bambi.moving = false; burstTwinkle(bambi.x, GY - 30, 6, 20, ['#ffffff', '#ffd76a']);
+  bambi.moving = false; burstTwinkle(bambi.x, GY - 24, 6, 20, ['#ffffff', '#ffd76a']);
   await say('밤비', `${voc()}, 큰일났어!`);
   await say('밤비', '장난꾸러기들이 트리 장식이랑\n초대장을 훔쳐 갔어!');
   await say('밤비', '같이 찾아줄래?\n나 먼저 가 있을게!');
@@ -675,7 +760,7 @@ async function runGame() {
   hint('화면을 <b>꾹</b> 누르고 있으면 걸어가요');
   for (let i = 0; i < 3; i++) {
     if (i === 2) { await walkUntil(SOL_X); S.holding = false; hideHint(); await solVoice(); hint('<b>꾹</b> 눌러서 계속 가요'); }
-    await walkUntil(EV[i].x - 40); S.holding = false; hideHint();
+    await walkUntil(EV[i].x - 32); S.holding = false; hideHint();
     await encounter(i);
     hint('<b>꾹</b> 눌러서 계속 가요');
   }
@@ -702,7 +787,7 @@ async function encounter(i) {
   await wait(type === 'elf' ? 1000 : 1000);
   let px = e.x;
   if (type === 'elf') {
-    await say('장난꾸러기 엘프', '치… 파티 재밌게 놀아…');
+    await say('장난꾸러기 버섯', '치… 파티 재밌게 놀아…');
     puff(e.x, GY - 11, 16); burstTwinkle(e.x, GY - 11, 14, 50, ['#ffd76a', '#5cff9a', '#ffffff']); ring(e.x, GY - 11, 2, 18, 0.35, ['#fff', '#b9b3ff']);
     px = e.x; e.alpha = 0; e.dizzy = false; await wait(500);
   }
@@ -718,7 +803,7 @@ async function pieceGet(i, x, y) {
   flareP(x, y, 14, 0.4); ring(x, y, 2, 24, 0.4, ['#fff', '#ffe08a', '#ffd25a']); burstTwinkle(x, y, 12, 50, ['#ffd76a', '#ffffff']); vlight(x, y, 70, 1.3, 0.6); shake(1, 0.1);
   await wait(700);
   player.cheer = true;
-  Object.assign(item, { fly: true, ft: 0, fd: 0.6, fx: item.x, fy: item.y, tx: player.x, ty: GY - 42 });
+  Object.assign(item, { fly: true, ft: 0, fd: 0.6, fx: item.x, fy: item.y, tx: player.x, ty: GY - 32 });
   await new Promise(r => { item.res = r; });
   flareP(item.x, item.y, 10, 0.3); rays(item.x, item.y, 10, 22, 1.2, '#ffe08a'); burstTwinkle(item.x, item.y, 10, 40, ['#ffd76a', '#fff', '#ff9fc0']); vlight(item.x, item.y, 60, 1, 0.8);
   await wait(700);
@@ -750,7 +835,7 @@ async function ending() {
   await wait(800);
   bambi.cheer = true; await say('밤비', `${voc()}, 다 찾았구나!\n고마워!`); bambi.cheer = false;
   sol.cheer = true; await say('솔', '호호호! 자, 마지막 장식은\n네가 달아줘!'); sol.cheer = false;
-  item = { sp: STAR, x: player.x, y: GY - 42, t: 0, visible: true };
+  item = { sp: STAR, x: player.x, y: GY - 32, t: 0, visible: true };
   player.cheer = true; flareP(item.x, item.y, 12, 0.4); burstTwinkle(item.x, item.y, 10, 40, ['#ffd76a', '#fff']);
   hint('화면을 <b>톡!</b> 눌러서 별을 달아 줘'); S.mode = 'tap';
   await waitTap();
@@ -773,7 +858,7 @@ async function ending() {
   tween(2.2, p => { S.amb = AMB[3] + (0.14 - AMB[3]) * p; }, easeIO);
   for (const t of NEAR) t.bulbs.forEach(b => { if (!b.on) { b.on = true; b.at = S.T + rand(0, 0.6); } });
   for (let k = 0; k < 7; k++) setTimeout(() => firework(TREE_X + rand(-56, 56), rand(16, GY - 90)), 300 + k * 420);
-  goldSnow(); sol.cheer = true; bambi.cheer = true; player.cheer = true;
+  goldSnow(); sol.cheer = true; bambi.cheer = true; player.cheer = true; spawnGuests(false);
   await wait(1600);
   await say('솔 & 밤비', '메리 크리스마스!\n파티에서 만나!');
   try { localStorage.setItem('solbam_done', '1'); } catch (e) {}
@@ -781,6 +866,10 @@ async function ending() {
   for (let k = 0; k < 3; k++) setTimeout(() => firework(TREE_X + rand(-50, 50), rand(20, 60)), k * 300);
   S.mode = 'tap'; await Promise.race([waitTap(), wait(4500)]); S.tapRes = null;
   mer.classList.add('hide'); showCard();
+}
+function spawnGuests(instant) {
+  const xs = [-50, -42, -16, 16, 44, 52, -58, 60];
+  GUESTS = GUESTF.map((c, i) => ({ c, x: TREE_X + xs[i], at: instant ? 0 : S.T + 0.25 * i, seed: rand(0, 6), shown: instant }));
 }
 function firework(x, y) {
   const col = pick([['#ffffff', '#ff6b7a', '#e8344a'], ['#ffffff', '#5cff9a', '#2f9a5a'], ['#ffffff', '#ffe08a', '#f0a93a'], ['#ffffff', '#9ad1ff', '#6ab8ff']]);
@@ -797,11 +886,11 @@ function showCard() {
   $('#cPot').textContent = CONFIG.potluck || '포트럭 안내는 곧 알려드릴게요!';
   if (CONFIG.rsvpUrl) $('#bRsvp').classList.remove('hide');
   const pc = $('#portrait'), g = pc.getContext('2d'); g.imageSmoothingEnabled = false; g.clearRect(0, 0, pc.width, pc.height);
-  const t = TREE_IMG.tree_s1 ? treeFromImg(TREE_IMG.tree_s1) : makePine(34, 30, { ...PAL_NEAR, bulbs: false });
+  const t = genTree({ type: 'pine', h: 30, w: 26, seed: 7, pal: TPAL[0], snowy: true });
   g.drawImage(t.cv, 40 - t.ax, 37 - t.h + 2); g.drawImage(STAR, 35, 0);
   g.fillStyle = '#c4e2f6'; g.fillRect(0, 37, 80, 3); g.fillStyle = '#ffffff'; g.fillRect(0, 37, 80, 1);
-  const pf = PF || buildPlayer(look);
-  g.drawImage(SOL.cheer, 2, 38 - SOL.cheer.height); g.drawImage(pf.cheer, 28, 38 - pf.cheer.height); g.drawImage(BAMBI.cheer, 54, 38 - BAMBI.cheer.height);
+  g.drawImage(CH.sol.cheer, 6, 38 - 25); g.drawImage(CH.player.cheer, 31, 38 - 25); g.drawImage(CH.bambi.cheer, 56, 38 - 25);
+  [GUESTF[0], GUESTF[3]].forEach((c, k) => c && g.drawImage(c, k ? 66 : -4, 38 - c.height));
   const c = $('#card'); c.classList.remove('hide'); const pp = c.querySelector('.letter'); pp.classList.remove('pop'); void pp.offsetWidth; pp.classList.add('pop'); c.scrollTop = 0;
 }
 function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.add('on'); setTimeout(() => el.classList.remove('on'), 1600); }
@@ -816,7 +905,7 @@ $('#bAgain').addEventListener('click', () => location.reload());
 
 /* ---------- 시작 ---------- */
 async function init() {
-  resize(); await loadImgs(); buildWorld(); loadSaved(); placeIcons();
+  resize(); await loadImgs(); setupSprites(); buildWorld(); loadSaved(); placeIcons();
   for (let i = 0; i < 70; i++) FLAKES.push({ x: rand(0, LW), y: rand(0, LH), vy: rand(6, 16), w: rand(1, 2.5), p: rand(0, 6), z: rand(0.4, 1.4) });
   setScene('title');
   addEventListener('resize', resize);
