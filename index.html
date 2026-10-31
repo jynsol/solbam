@@ -73,8 +73,8 @@ img.px,canvas.px{image-rendering:pixelated}
 .btns .btn{flex:1}.btns .btn.b2{flex:0 0 96px}
 
 /* ---------- 대사창 ---------- */
-#dlg{position:absolute;left:12px;right:12px;bottom:16px;min-height:104px;padding:16px 14px 14px 92px;pointer-events:none}
-#dlg.in{animation:dIn .18s steps(3)}
+#dlg{position:absolute;left:12px;right:12px;bottom:16px;height:112px;padding:16px 14px 14px 92px;pointer-events:none;overflow:hidden}
+#dlg.in{animation:none}
 @keyframes dIn{from{transform:translateY(16px);opacity:0}}
 .pic{position:absolute;left:14px;top:14px;width:66px;height:66px;background:var(--sky);
   box-shadow:0 0 0 var(--p) var(--ink),inset 0 calc(-3*var(--p)) 0 0 #9cc6e6}
@@ -84,12 +84,13 @@ img.px,canvas.px{image-rendering:pixelated}
 #dlgText{font-size:15px;line-height:1.7;color:#fff;white-space:pre-wrap;word-break:keep-all;min-height:50px}
 #dlgNext{position:absolute;right:14px;bottom:12px;width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-top:8px solid var(--gold);animation:bob .5s steps(2) infinite}
 @keyframes bob{50%{transform:translateY(3px)}}
-#hint{position:absolute;left:50%;bottom:34px;transform:translateX(-50%);font-size:14px;padding:11px 16px;white-space:nowrap;pointer-events:none;animation:bob 1s steps(2) infinite}
+#hint{position:absolute;left:50%;bottom:34px;transform:translateX(-50%);font-size:14px;padding:11px 16px;white-space:nowrap;pointer-events:none}
 #hint b{color:var(--gold);font-weight:400}
 
 /* ---------- 입장 ---------- */
-#gate{position:absolute;left:14px;right:14px;bottom:18%;padding:28px 14px 14px}
-#gate .row input{flex:1;height:36px;background:var(--ink);border:0;color:#fff;font-family:inherit;font-size:16px;padding:0 10px;outline:none;border-radius:0;box-shadow:inset 0 0 0 2px #3a4468;-webkit-user-select:text;user-select:text}
+#gate{position:absolute;left:14px;right:14px;bottom:18%;padding:28px 16px 16px}
+#gate .row{gap:10px}
+#gate .row input{flex:1;min-width:0;width:0;height:36px;background:var(--ink);border:0;color:#fff;font-family:inherit;font-size:16px;padding:0 10px;outline:none;border-radius:0;box-shadow:inset 0 0 0 2px #3a4468;-webkit-user-select:text;user-select:text}
 #gate .row input:focus{box-shadow:inset 0 0 0 2px var(--gold)}
 #gate .row input::placeholder{color:#6a7398}
 #gErr{min-height:18px;margin-top:8px;text-align:center;font-size:12px;color:#ff8a8a}

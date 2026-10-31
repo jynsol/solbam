@@ -95,7 +95,9 @@ let FAR = [], MID = [], NEAR = [], farV = [], midV = [], PROPS = [], BUN = [];
 const BIG = { tree: null, lit: false, star: false };
 const TREE_IMG = {};
 function loadImgs() {
-  return Promise.all(['pine_s', 'bush1', 'bush2', 'bush3', 'grass', 'mush', 'log', 'bunny', 'player', 'sol', 'bambi', 'en_fuzz', 'en_slime', 'en_mush', 'guests'].map(n => new Promise(res => {
+  const TT = ['bubble', 'large', 'pico', 'pine', 'slim', 'smallpine', 'spruce', 'thick', 'tiny', 'tri'], PP = ['cold', 'teal', 'gteal', 'green', 'night'];
+  const trees = TT.flatMap(t => PP.map(p => 'trees/' + t + '_' + p));
+  return Promise.all([...trees, 'pine_s', 'bush1', 'bush2', 'bush3', 'grass', 'bunny', 'player', 'sol', 'bambi', 'en_fuzz', 'en_slime', 'en_mush', 'guests'].map(n => new Promise(res => {
     const im = new Image(); im.onload = () => { TREE_IMG[n] = im; res(); }; im.onerror = () => res(); im.src = 'img/' + n + '.png';
   })));
 }
@@ -200,29 +202,34 @@ function buildWorld() {
 function buildWorldInner() {
   farV = [];
   for (let i = 0; i < 5; i++) farV.push(makePine(irand(38, 58), irand(24, 34), PAL_FAR));
-  midV = []; const SIL = { l: '#2a3a52', m: '#22324a', d: '#1c2a40', ol: '#141d2e' };
-  for (let i = 0; i < 10; i++) midV.push(randTree(500 + i, { pal: SIL, nobulb: true, h: irand(28, 60) }));
+  midV = [];
+  for (const t of ['pico', 'tiny', 'tri', 'smallpine', 'spruce', 'slim']) for (const flip of [false, true]) { const im = TREE_IMG['trees/' + t + '_night']; if (im) midV.push(treeFromImg(im, { flip, tint: [0.55, 0.6, 0.78] })); }
   FAR = []; for (let x = -20; x < 640; x += irand(9, 16)) FAR.push({ x, v: irand(0, farV.length - 1), dy: irand(0, 5) });
   MID = []; for (let x = -20; x < 1100; x += irand(14, 24)) MID.push({ x, v: irand(0, midV.length - 1), dy: irand(0, 6) });
-  NEAR = []; let seed = 1;
-  for (let x = -40; x < TREE_X - 70;) {
-    const tr = randTree(seed++);
+  NEAR = [];
+  const TT = ['bubble', 'large', 'pico', 'pine', 'slim', 'smallpine', 'spruce', 'thick', 'tiny', 'tri'], PN = ['cold', 'teal', 'gteal', 'green'];
+  let bag = [];
+  for (let x = -40; x < TREE_X - 80;) {
+    if (!bag.length) bag = [...TT].sort(() => Math.random() - 0.5);
+    const t = bag.pop(), im = TREE_IMG['trees/' + t + '_' + pick(PN)];
+    const tr = im ? treeFromImg(im, { flip: Math.random() < 0.5, tiers: [0.35, 0.55, 0.75] }) : randTree(x + 99);
     NEAR.push({ x: x + irand(-3, 3), pine: tr, bulbs: tr.bulbs.map((b, i) => ({ ...b, col: WARM[(i * 3 + NEAR.length) % WARM.length], on: false, at: 0, seed: rand(0, 6.28) })) });
-    x += Math.max(14, Math.round(tr.w * 0.7)) + irand(2, 14);
+    x += Math.max(16, Math.round(tr.w * 0.62)) + irand(0, 12);
   }
   PROPS = [];
-  const pp = ['grass', 'grass', 'bush1', 'bush2', 'bush3', 'log', 'mush', 'pine_s'].filter(n => TREE_IMG[n]);
+  const pp = ['grass', 'grass', 'bush1', 'bush2', 'bush3', 'pine_s'].filter(n => TREE_IMG[n]);
   if (pp.length) for (let x = 0; x < TREE_X - 80; x += irand(16, 42)) PROPS.push({ x, n: pick(pp), flip: Math.random() < 0.5, dy: irand(0, 2) });
   BUN = [];
   for (const x of [130, 330, 470, 600, 720, 880]) BUN.push({ x: x + irand(-20, 20), dir: Math.random() < 0.5 ? -1 : 1, hop: null, cool: rand(0, 2), f: 0, jy: 0 });
   BIG.tree = makeBigTree();
 }
 function makeBigTree() {
-  const p = genTree({ type: 'pine', h: 104, w: 74, tiers: 6, seed: 42, pal: TPAL[0], snowy: true, bulbs: [0.22, 0.32, 0.42, 0.52, 0.62, 0.72, 0.82], gap: 5 });
+  const im = TREE_IMG['trees/large_green'];
+  const p = im ? treeFromImg(im, { tiers: [0.24, 0.34, 0.44, 0.54, 0.64, 0.74, 0.84], gap: 6 }) : genTree({ type: 'pine', h: 104, w: 74, tiers: 6, seed: 42, pal: TPAL[0], snowy: true, bulbs: [0.22, 0.32, 0.42, 0.52, 0.62, 0.72, 0.82], gap: 5 });
   const orn = [];
-  [0.28, 0.38, 0.48, 0.58, 0.68, 0.78].forEach(t => {
-    const y = Math.floor(t * (p.h - 4)) + 3, [L, Rr] = p.rows[y] || [-1, -1]; if (L < 0) return;
-    for (let j = 0; j < 2; j++) orn.push({ lx: irand(L + 3, Rr - 4) - p.ax, ly: y - p.h, col: pick(['#d8394a', '#d8394a', '#ffd25e', '#e8f4fc']) });
+  [0.3, 0.4, 0.5, 0.6, 0.7, 0.8].forEach(t => {
+    const y = Math.floor(t * (p.h - 2)), [L, Rr] = p.rows[y] || [-1, -1]; if (L < 0 || Rr - L < 10) return;
+    for (let j = 0; j < 2; j++) orn.push({ lx: irand(L + 4, Rr - 5) - p.ax, ly: y - p.h, col: pick(['#d8394a', '#d8394a', '#ffd25e', '#e8f4fc']) });
   });
   return { ...p, bulbs: p.bulbs.map((b, j) => ({ ...b, col: WARM[j % WARM.length], on: false, at: 0, seed: rand(0, 6.28) })), orn, top: -p.h + 1 };
 }
@@ -917,7 +924,7 @@ function showCard() {
   $('#cPot').textContent = CONFIG.potluck || '포트럭 안내는 곧 알려드릴게요!';
   if (CONFIG.rsvpUrl) $('#bRsvp').classList.remove('hide');
   const pc = $('#portrait'), g = pc.getContext('2d'); g.imageSmoothingEnabled = false; g.clearRect(0, 0, pc.width, pc.height);
-  const t = genTree({ type: 'pine', h: 30, w: 26, seed: 7, pal: TPAL[0], snowy: true });
+  const t = TREE_IMG['trees/pico_green'] ? treeFromImg(TREE_IMG['trees/pico_green']) : genTree({ type: 'pine', h: 30, w: 26, seed: 7, pal: TPAL[0], snowy: true });
   g.drawImage(t.cv, 40 - t.ax, 37 - t.h + 2); g.drawImage(STAR, 35, 0);
   g.fillStyle = '#c4e2f6'; g.fillRect(0, 37, 80, 3); g.fillStyle = '#ffffff'; g.fillRect(0, 37, 80, 1);
   g.drawImage(CH.sol.cheer, 6, 38 - 25); g.drawImage(CH.player.cheer, 31, 38 - 25); g.drawImage(CH.bambi.cheer, 56, 38 - 25);

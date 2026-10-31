@@ -7,3 +7,6 @@
 
 ## 배포
 GitHub 저장소 Settings → Pages에서 Branch를 `main` / `(root)`로 지정하면 공개 주소가 생겨요.
+
+## 크레딧
+- 나무: [Pixel Art Spruce Tree Pack](https://karsiori.itch.io/pixel-art-spruce-tree-pack-animated) by karsiori (CC0)
