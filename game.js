@@ -1089,7 +1089,7 @@ function showCard() {
   const t = TREE_IMG['trees/pico_green'] ? treeFromImg(TREE_IMG['trees/pico_green']) : genTree({ type: 'pine', h: 30, w: 26, seed: 7, pal: TPAL[0], snowy: true });
   if(BIG.tree.cv.hires) g.drawImage(BIG.tree.cv.hires,43,2,34,45); else g.drawImage(t.cv,60-t.ax,47-t.h+2); g.drawImage(STAR,55,0);
   g.fillStyle = '#c4e2f6'; g.fillRect(0, 47, 120, 3); g.fillStyle = '#ffffff'; g.fillRect(0, 47, 120, 1);
-  [EN.fuzz, EN.slime, CH.sol.cheer, CH.player.cheer, CH.bambi.cheer, EN.mush].forEach((sp, i) => g.drawImage(sp.hires || sp, 10 + i * 20 - sp.width / 2, 48 - sp.height, sp.width, sp.height));
+  [EN.fuzz.cheer || EN.fuzz, EN.slime.cheer || EN.slime, CH.sol.cheer, CH.player.cheer, CH.bambi.cheer, EN.mush.cheer || EN.mush].forEach((sp, i) => g.drawImage(sp.hires || sp, 10 + i * 20 - sp.width / 2, 48 - sp.height, sp.width, sp.height));
   const c = $('#card'); c.classList.remove('hide'); const pp = c.querySelector('.letter'); pp.classList.remove('pop'); void pp.offsetWidth; pp.classList.add('pop'); c.scrollTop = 0;
 }
 function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.add('on'); setTimeout(() => el.classList.remove('on'), 1600); }
