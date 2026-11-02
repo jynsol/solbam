@@ -88,7 +88,7 @@ function makePine(h, w, c, tiers) {
   }
   return { cv: g, ax: x0, h: ch, bulbs, tiers, hwAt, H: h };
 }
-const WARM = ['#ffe27a', '#fff2b0', '#ffc94a', '#ffe27a', '#ff8a8a', '#fff2b0'];
+const WARM = ['#efb94e', '#79b7e0', '#e67990', '#eba744', '#bb87d0'];
 const PAL_FAR = { mid: '#1b2134', dark: '#181d2f', light: '#1f2639', trunk: '#161a2a' };
 const PAL_MID = { mid: '#22324a', dark: '#1d2b42', light: '#2a3c56', snow: '#5d7396', snow2: '#4a5f82', trunk: '#1d2235' };
 const PAL_NEAR = { mid: '#2c5c60', dark: '#1f4048', light: '#3f7c76', snow: '#e8f4fc', snow2: '#a9cbe3', trunk: '#5a3a2a', bulbs: true };
@@ -674,15 +674,15 @@ function render() {
   ctx.drawImage(groundCv, gx, GY + oy); ctx.drawImage(groundCv, gx + 128, GY + oy);
   const lit = [];
   const occupied = [];
-  drawForestCanopy(cam, oy, lit, occupied);
+  drawForestCanopy(R(cam), oy, lit, occupied);
   for (const t of NEAR) {
-    const xx = t.x - cam; if (xx < -30 || xx > LW + 30) continue;
+    const xx = t.x - R(cam); if (xx < -30 || xx > LW + 30) continue;
     ctx.drawImage(t.pine.cv, R(xx - t.pine.ax), GY - t.pine.h + 3 + oy);
     decorateTree(t.pine, t.bulbs, xx, oy, S.festival || 0, false, occupied);
     for (const b of t.bulbs) { const bx = R(xx + b.lx), by = GY + 3 + b.ly + oy; if (b.on && T >= b.at) lit.push(bx, by, b); else { ctx.fillStyle = '#1a2a33'; ctx.fillRect(bx, by, 1, 1); } }
   }
   if (BIG.tree) {
-    const t = BIG.tree, xx = TREE_X - cam;
+    const t = BIG.tree, xx = TREE_X - R(cam);
     if (xx > -60 && xx < LW + 60) {
       drawSp(t.cv, xx - t.ax, GY - t.h + 3 + oy);
       decorateTree(t, t.bulbs, xx, oy, S.festival || 0, true, occupied);
@@ -718,7 +718,7 @@ function render() {
   if (enemy && enemy.alpha > 0) drawEnemy(cam, oy);
   if (player.visible && PF) drawPlayer(cam, oy);
   if (item && item.visible) { const bob = item.fly ? 0 : R(Math.sin(item.t * 4) * 1.5); drawSp(item.sp, item.x - item.sp.width / 2 - cam, item.y - item.sp.height / 2 + bob + oy); }
-  const starX = TREE_X - cam, starY = GY + 3 + (BIG.tree ? BIG.tree.top : 0) - 4 + oy;
+  const starX = TREE_X - R(cam), starY = GY + 3 + (BIG.tree ? BIG.tree.top : 0) - 4 + oy;
   if (BIG.star) drawSp(STAR, starX - 5, starY - 6);
 
   // 빛
@@ -738,21 +738,17 @@ function render() {
   if (player.visible && S.mode !== 'custom') drawGlow(player.x - cam, GY - 12 + oy, 16, '#2a2212', 0.8);
   for (let i = 0; i < lit.length; i += 3) {
     const b = lit[i + 2], tw = Math.sin(T * (2.1 + .55 * Math.sin(b.seed)) + b.seed), age = T - b.at;
-    ctx.fillStyle = b.col; ctx.fillRect(lit[i], lit[i + 1], 1, 1);
-    if (tw > .91) sparkle(lit[i], lit[i + 1], '#fff6d1', tw > .985 ? 2 : 1);
-    drawGlow(lit[i], lit[i + 1], 7, b.col, 0.60 + 0.36 * tw);
-    if (age < 0.25) flareAt(lit[i], lit[i + 1], R(5 * (1 - age / 0.25)) + 1, '#fff', b.col);
+    const bx = lit[i], by = lit[i + 1];
+    drawGlow(bx, by, 8, b.col, .42 + .38 * tw);
+    ctx.fillStyle = b.col;
+    ctx.fillRect(bx, by, 1, 1);
+    if (tw > .78) sparkle(bx, by, b.col, tw > .97 ? 2 : 1);
+    if (tw > .94) pxl(bx, by, '#ffd678');
+    if (age < .25) flareAt(bx, by, R(4 * (1 - age / .25)) + 1, '#ffd678', b.col);
   }
   if (bambi.visible) { drawGlow(noseX, noseY, 5, '#ff3344', 0.85 + 0.15 * Math.sin(T * 5)); }
   if (item && item.visible) { const bob = item.fly ? 0 : R(Math.sin(item.t * 4) * 1.5); drawGlow(item.x - cam, item.y + oy + bob, 13, '#ffcf6a', 0.8); if ((item.t * 6 | 0) % 3 === 0) sparkle(item.x - cam + 6, item.y - 5 + oy + bob, '#fff', 1); }
-  if (BIG.star) { drawGlow(starX, starY, BIG.lit ? 24 : 13, '#ffcf6a', 0.9); if (BIG.lit) flareAt(starX, starY, 7 + R(Math.sin(T * 4) * 2), '#fff', '#ffe08a'); }
-  if (S.festival >= 2) {
-    for(const t of NEAR){const x=t.x-cam;if(x < -20 || x > LW+20 || !t.bulbs.some(b=>b.on&&T>=b.at))continue;
-      for(let j=0;j<S.festival;j++){const phase=T*.45+t.x*.17+j*2.1,px=x+Math.sin(phase)*12,py=GY-t.pine.h*(.3+j*.18)+Math.cos(phase)*4+oy;
-        ctx.save();ctx.globalAlpha=.35+.3*Math.sin(phase)**2;starGem(px,py,1.3,'#ffe3a0',phase);ctx.restore();}
-    }
-  }
-  if(BIG.lit){for(let j=0;j<3;j++){const a=T*.7+j*2.094;starGem(starX+Math.cos(a)*10,starY+Math.sin(a)*5,1.5,'#fff2bd',a);}}
+  if (BIG.star) { drawGlow(starX, starY, BIG.lit ? 24 : 13, '#ffcf6a', 0.9); if (BIG.lit) flareAt(starX, starY, 7 + R(Math.sin(T * 4) * 2), '#ffda72', '#efa936'); }
   drawRays(cam, oy);
   for (const s of SLASH) drawSlash(s, cam, oy);
   drawParts(true, cam, oy);
