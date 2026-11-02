@@ -756,12 +756,12 @@ function render() {
     ctx.fillStyle = b.col;
     ctx.fillRect(bx, by, 1, 1);
     if (tw > .78) sparkle(bx, by, b.col, tw > .97 ? 2 : 1);
-    if (tw > .94) pxl(bx, by, '#ffd678');
-    if (age < .25) flareAt(bx, by, R(4 * (1 - age / .25)) + 1, '#ffd678', b.col);
+    if (tw > .94) pxl(bx, by, tw > .985 ? '#fffdf1' : '#ffe9b6');
+    if (age < .25) flareAt(bx, by, R(4 * (1 - age / .25)) + 1, '#fff9e6', b.col);
   }
   if (bambi.visible) { drawGlow(noseX, noseY, 5, '#ff3344', 0.85 + 0.15 * Math.sin(T * 5)); }
   if (item && item.visible) { const bob = item.fly ? 0 : R(Math.sin(item.t * 4) * 1.5); drawGlow(item.x - cam, item.y + oy + bob, 13, '#ffcf6a', 0.8); if ((item.t * 6 | 0) % 3 === 0) sparkle(item.x - cam + 6, item.y - 5 + oy + bob, '#fff', 1); }
-  if (BIG.star) { drawGlow(starX, starY, BIG.lit ? 24 : 13, '#ffcf6a', 0.9); if (BIG.lit) flareAt(starX, starY, 7 + R(Math.sin(T * 4) * 2), '#ffda72', '#efa936'); }
+  if (BIG.star) { drawGlow(starX, starY, BIG.lit ? 24 : 13, '#ffcf6a', 0.9); if (BIG.lit) flareAt(starX, starY, 7 + R(Math.sin(T * 4) * 2), '#ffda72', '#efa936'); if (BIG.lit && Math.sin(T * 4) > .85) pxl(starX, starY, '#fffdf1'); }
   drawRays(cam, oy);
   for (const s of SLASH) drawSlash(s, cam, oy);
   drawParts(true, cam, oy);
