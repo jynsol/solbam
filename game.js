@@ -561,7 +561,15 @@ const BLUE_PRESENT = spr([
   '...dd.dd...', '..dbbdbbd..', '.ddddbdddd.', 'dccccbccccd',
   'dbbbbhbbbbd','dddddhddddd','.dbbbhbbbd.','.dbbbhbbbd.','.ddddddddd.'
 ], { d:'#34456a', b:'#668bd0', c:'#92bce5', h:'#fff0bc' }, NO);
-function decorateTree(tree, bulbs, x, oy, level, centerpiece) {
+// Screen-space bounds are shared by the tree and canopy passes for this frame.
+function reserveOrnament(occupied, left, top, right, bottom) {
+  const gap = 2;
+  if (occupied.some(b => left < b.right + gap && right + gap > b.left &&
+                         top < b.bottom + gap && bottom + gap > b.top)) return false;
+  occupied.push({left, top, right, bottom});
+  return true;
+}
+function decorateTree(tree, bulbs, x, oy, level, centerpiece, occupied) {
   if (!level || (!centerpiece && !bulbs.some(b => b.on && S.T >= b.at))) return;
   ctx.save();
   ctx.globalAlpha = 1;
@@ -577,6 +585,9 @@ function decorateTree(tree, bulbs, x, oy, level, centerpiece) {
   if (level >= 2) bulbs.forEach((bulb, index) => {
     if (index % 2) return;
     const bx = R(x + bulb.lx), by = GY + 7 + bulb.ly + oy;
+    const bow = level >= 3 && index % 16 === 4;
+    const radius = bow ? 6 : level >= 3 ? 4 : 2;
+    if (!reserveOrnament(occupied, bx-radius, by-3, bx+radius+1, by+6)) return;
     const palette = ['#cc5064', '#83b9e2', '#cea3de', '#edbd64'];
     ctx.fillStyle = '#c9a56a';
     ctx.fillRect(bx, by - 3, 1, 2);
@@ -607,7 +618,7 @@ function decorateTree(tree, bulbs, x, oy, level, centerpiece) {
   ctx.restore();
 }
 // Strings of warm lights and hanging stars transform the forest canopy.
-function drawForestCanopy(cam, oy, lit) {
+function drawForestCanopy(cam, oy, lit, occupied) {
   if ((S.festival || 0) < 2) return;
   for (let i = 1; i < NEAR.length; i++) {
     const a = NEAR[i - 1], b = NEAR[i];
@@ -620,7 +631,7 @@ function drawForestCanopy(cam, oy, lit) {
       const u=j/8, x=x0+(x1-x0)*u, y=(1-u)*(1-u)*y0+2*(1-u)*u*(Math.max(y0,y1)+12)+u*u*y1;
       const col=j%2?'#ffe2a1':'#f0a3a4';
       lit.push(R(x), R(y), {col, at: S.decorAt, seed:i+j});
-      if(S.festival>=3 && j%2===0) {line(x,y,x,y+5,'#c0a471');starGem(x,y+7,2.2,'#f1cc79',0);}
+      if(S.festival>=3 && j%2===0 && reserveOrnament(occupied,x-3,y,x+4,y+10)) {line(x,y,x,y+5,'#c0a471');starGem(x,y+7,2.2,'#f1cc79',0);}
     }
   }
 }
@@ -662,19 +673,20 @@ function render() {
   const gx = -(((R(cam) % 128) + 128) % 128);
   ctx.drawImage(groundCv, gx, GY + oy); ctx.drawImage(groundCv, gx + 128, GY + oy);
   const lit = [];
-  drawForestCanopy(cam, oy, lit);
+  const occupied = [];
+  drawForestCanopy(cam, oy, lit, occupied);
   for (const t of NEAR) {
     const xx = t.x - cam; if (xx < -30 || xx > LW + 30) continue;
     ctx.drawImage(t.pine.cv, R(xx - t.pine.ax), GY - t.pine.h + 3 + oy);
-    decorateTree(t.pine, t.bulbs, xx, oy, S.festival || 0, false);
+    decorateTree(t.pine, t.bulbs, xx, oy, S.festival || 0, false, occupied);
     for (const b of t.bulbs) { const bx = R(xx + b.lx), by = GY + 3 + b.ly + oy; if (b.on && T >= b.at) lit.push(bx, by, b); else { ctx.fillStyle = '#1a2a33'; ctx.fillRect(bx, by, 1, 1); } }
   }
   if (BIG.tree) {
     const t = BIG.tree, xx = TREE_X - cam;
     if (xx > -60 && xx < LW + 60) {
       drawSp(t.cv, xx - t.ax, GY - t.h + 3 + oy);
-      decorateTree(t, t.bulbs, xx, oy, S.festival || 0, true);
-      for (const o of t.orn) { const ox = R(xx + o.lx), oy2 = GY + 3 + o.ly + oy; ctx.fillStyle = OL; ctx.fillRect(ox - 1, oy2, 4, 2); ctx.fillRect(ox, oy2 - 1, 2, 4); ctx.fillStyle = o.col; ctx.fillRect(ox, oy2, 2, 2); ctx.fillStyle = '#fff'; ctx.fillRect(ox, oy2, 1, 1); }
+      decorateTree(t, t.bulbs, xx, oy, S.festival || 0, true, occupied);
+      for (const o of t.orn) { const ox = R(xx + o.lx), oy2 = GY + 3 + o.ly + oy; if (!reserveOrnament(occupied, ox-1, oy2-1, ox+3, oy2+3)) continue; ctx.fillStyle = OL; ctx.fillRect(ox - 1, oy2, 4, 2); ctx.fillRect(ox, oy2 - 1, 2, 4); ctx.fillStyle = o.col; ctx.fillRect(ox, oy2, 2, 2); ctx.fillStyle = '#fff'; ctx.fillRect(ox, oy2, 1, 1); }
       for (const b of t.bulbs) { const bx = R(xx + b.lx), by = GY + 3 + b.ly + oy; if (b.on && T >= b.at) lit.push(bx, by, b); else { ctx.fillStyle = '#1a2a33'; ctx.fillRect(bx, by, 1, 1); } }
       if (S.festival >= 3) {
         drawSp(GIFT, xx - 24, GY + oy + 1 - GIFT.height);
