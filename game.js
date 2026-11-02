@@ -969,7 +969,7 @@ async function encounter(i) {
   await wait(type === 'elf' ? 1000 : 1000);
   let px = e.x;
   if (type === 'elf') {
-    await say('크리스마스 요정', '치… 파티 재밌게 놀아…');
+    await say('크리스마스 요정', '에잇! 내가 졌으니까 초대장 줄게!\n파티에서 만나!');
     puff(e.x, GY - 11, 16); burstTwinkle(e.x, GY - 11, 14, 50, ['#ffd76a', '#5cff9a', '#ffffff']); ring(e.x, GY - 11, 2, 18, 0.35, ['#fff', '#b9b3ff']);
     px = e.x; e.alpha = 0; e.dizzy = false; await wait(500);
   }
