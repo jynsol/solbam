@@ -382,10 +382,13 @@ function startAttack() {
   player.atk = { t: 0, kind: player.combo, slash: false, hit: false, fin: enemy.hp === 1 };
 }
 function spawnSlash(kind, fin) {
-  const target = hitPoint();
-  SLASH.push({ x: player.x + 8, y: GY - 11, tx: target.x, ty: target.y,
-    lift: kind === 1 ? 4 : fin ? -17 : -11, t: 0, dur: .16 });
-
+  const cx = player.x + 5, cy = GY - 9;
+  if (fin) {
+    SLASH.push({ x: cx + 3, y: cy - 2, r1: 6, r2: 22, a0: -2.1, a1: 1.2, t: 0, dur: 0.12, big: true });
+    SLASH.push({ x: cx + 3, y: cy - 2, r1: 6, r2: 22, a0: 2.0, a1: -1.3, t: -0.06, dur: 0.12, big: true });
+  } else if (kind === 1) SLASH.push({ x: cx, y: cy, r1: 5, r2: 15, a0: 1.3, a1: -1.7, t: 0, dur: 0.1 });
+  else if (kind === 2) SLASH.push({ x: cx, y: cy, r1: 5, r2: 18, a0: -2.4, a1: 1.1, t: 0, dur: 0.11, big: true });
+  else SLASH.push({ x: cx, y: cy, r1: 5, r2: 15, a0: -1.9, a1: 1.0, t: 0, dur: 0.1 });
 }
 function hitPoint() { return { x: enemy.x - enemy.w * 0.2, y: GY - enemy.h * 0.55 + enemy.oy }; }
 function doHit(a) {
@@ -394,18 +397,27 @@ function doHit(a) {
   enemy.broke.push({ i: enemy.hp, t: 0 });
   const big = a.kind === 2;
   if (enemy.hp > 0) {
-    S.freeze = big ? .055 : .035;
-    shake(1, .08);
-    candyImpact(hx, hy, big ? 1.2 : 1);
+    S.freeze = big ? 0.085 : 0.06; shake(big ? 3 : 2, big ? 0.18 : 0.12);
+    flareP(hx, hy, big ? 12 : 8, 0.16);
+    ring(hx, hy, 2, big ? 22 : 15, 0.24, ['#ffffff', '#fff1a8', '#ffd25a', '#ff7a8a']);
+    burstSparks(hx, hy, big ? 18 : 12, big ? 150 : 120, { dir: -0.3, spread: 1.5 });
+    burstTwinkle(hx, hy, big ? 8 : 4, 40, ['#ffd76a', '#5cff9a', '#ff6b7a', '#ffffff']);
+    debris(enemy.type, hx, hy, big ? 7 : 4);
+    if (big) { confetti(hx, hy, 14, 90); ring(hx, hy, 4, 30, 0.34, ['#fff', '#5cff9a', '#2f9a5a'], 0.04); }
+    vlight(hx, hy, big ? 64 : 48, big ? 1.3 : 1.0, big ? 0.35 : 0.24);
   } else finisher(hx, hy);
 }
 function finisher(hx, hy) {
   S.mode = 'cutscene'; hideHint();
-  S.freeze = .09;
-  shake(2, .17);
-  S.ts = .55;
-  tween(.45, p => { S.ts = .55 + .45 * p; });
-  candyImpact(hx, hy, 1.6);
+  S.freeze = 0.17; flash(0.9); shake(5, 0.4);
+  S.ts = 0.28; tweens.push({ t: 0, d: 0.9, fn: p => S.ts = 0.28 + 0.72 * p, r: () => {}, ease: x => x * x });
+  flareP(hx, hy, 24, 0.45);
+  ring(hx, hy, 3, 34, 0.4, ['#ffffff', '#fff1a8', '#ffd25a', '#ff9a3a']);
+  ring(hx, hy, 3, 50, 0.55, ['#ffffff', '#ff4a5a', '#d8303a'], 0.08);
+  ring(hx, hy, 3, 64, 0.7, ['#ffffff', '#5cff9a', '#2f9a5a'], 0.16);
+  burstSparks(hx, hy, 34, 190, { g: 90, lm: 1.4 });
+  burstTwinkle(hx, hy, 18, 70, ['#ffd76a', '#5cff9a', '#ff6b7a', '#ffffff', '#6ab8ff'], { lm: 1.6 });
+  confetti(hx, hy, 28, 130); rays(hx, hy, 14, 70, 1.1); vlight(hx, hy, 110, 1.8, 1.2);
   enemy.state = 'dying'; enemy.dieAt = 0;
 }
 function dissolve(mode) {
@@ -583,9 +595,7 @@ function starGem(x,y,r,col,rotation) {
   ctx.fillStyle=col;ctx.beginPath();
   for(let i=0;i<10;i++){const a=rotation-Math.PI/2+i*Math.PI/5,d=i%2?r*.45:r;const px=x+Math.cos(a)*d,py=y+Math.sin(a)*d;i?ctx.lineTo(px,py):ctx.moveTo(px,py);}ctx.closePath();ctx.fill();
 }
-function holidayBurst(x,y,strength=1) {
-  for(let i=0;i<10*strength;i++){const a=i/(10*strength)*Math.PI*2,v=rand(15,40);part({k:i%3?'star':'snowflake',x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v-12,g:12,drag:.98,life:rand(.55,1.1),cols:[i%2?'#ffe2a1':'#c5eafa'],rot:a,vr:rand(-2,2),s:rand(1.3,2.5),emit:true});}
-}
+
 const whiteCache = new Map();
 function whiteOf(img) { if (whiteCache.has(img)) return whiteCache.get(img); const c = mkCanvas(img.width, img.height), g = c.getContext('2d'); g.drawImage(img, 0, 0); g.globalCompositeOperation = 'source-in'; g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); if (img.hires) { c.hires = mkCanvas(img.hires.width, img.hires.height); const h = c.hires.getContext('2d'); h.drawImage(img.hires, 0, 0); h.globalCompositeOperation = 'source-in'; h.fillStyle = '#fff'; h.fillRect(0, 0, c.hires.width, c.hires.height); } whiteCache.set(img, c); return c; }
 const LIGHTS = [];
@@ -760,47 +770,23 @@ function drawHUD() {
     else drawSp(ENVELOPE_EMPTY, x, y);
   }
 }
-const CANDY_STAR = ['...1...', '..121..', '1112111', '.12221.', '..222..', '.12121.', '.11.11.'];
-const ICE_FLAKE = ['..2..','1.2.1','.121.','22222','.121.','1.2.1','..2..'];
-function stampCharm(x, y, rows, edge, fill, size) {
-  const left = R(x - rows[0].length * size / 2), top = R(y - rows.length * size / 2);
-  for (let row = 0; row < rows.length; row++) {
-    for (let col = 0; col < rows[row].length; col++) {
-      const pixel = rows[row][col];
-      if (pixel === '.') continue;
-      ctx.fillStyle = pixel === '1' ? edge : fill;
-      ctx.fillRect(left + col * size, top + row * size, size, size);
+function drawSlash(s, cam, oy) {
+  if (s.t < 0) return;
+  const p = Math.min(1, s.t / s.dur), dir = Math.sign(s.a1 - s.a0), head = s.a0 + (s.a1 - s.a0) * easeOut(p);
+  const tp = clamp((s.t - s.dur * 0.35) / (s.dur * 1.6), 0, 1), tail = s.a0 + (s.a1 - s.a0) * (1 - Math.pow(1 - tp, 2)), span = Math.abs(head - tail);
+  if (span < 0.02) return;
+  const cx = s.x - cam, cy = s.y + oy;
+  for (let a = tail; dir > 0 ? a <= head : a >= head; a += dir * 0.03) {
+    const along = Math.abs(a - tail) / span, thick = (s.r2 - s.r1) * (0.15 + 0.85 * Math.pow(along, 0.7));
+    for (let r = s.r2 - thick; r <= s.r2; r += 0.6) {
+      const x = R(cx + Math.cos(a) * r), y = R(cy + Math.sin(a) * r);
+      if (along < 0.35 && ((x + y) & 1)) continue;
+      let c = along > 0.88 ? '#ffffff' : r > s.r2 - 0.7 ? '#ffe08a' : r > s.r2 - thick * .5 ? '#fff0ca' : '#dc6272';
+      if (s.big && r < s.r2 - thick + 1.2) c = '#a84058';
+      ctx.fillStyle = c; ctx.fillRect(x, y, 1, 1);
     }
   }
-}
-function candyImpact(x, y, power) {
-  part({ k: 'charm', x, y, life: .28, s: power, emit: true });
-  const count = Math.round(5 * power);
-  for (let i = 0; i < count; i++) {
-    const angle = Math.PI * 2 * i / count - 1.8;
-    part({ k: 'charm', x, y, vx: Math.cos(angle) * 38 * power,
-      vy: Math.sin(angle) * 28 * power - 14, drag: .975, g: 30,
-      life: .58 + (i % 3) * .14, delay: .045 + i * .013,
-      ice: i % 3 === 1, pink: i % 3 === 2, s: .6, emit: true });
-  }
-  vlight(x, y, 32 * power, .85, .32);
-}
-function drawSlash(s, cam, oy) {
-  const head = clamp(s.t / .035, 0, 1);
-  const tail = clamp((s.t - .065) / .28, 0, 1);
-  if (tail >= head) return;
-  ctx.save();
-  ctx.globalAlpha = 1 - tail;
-  for (let i = Math.floor(tail * 32); i <= Math.floor(head * 32); i++) {
-    const u = i / 32;
-    const x = R(s.x + (s.tx - s.x) * u - cam);
-    const y = R(s.y + (s.ty - s.y) * u + 4 * u * (1-u) * s.lift + oy);
-    const width = 1 + R(2 * Math.sin(Math.PI*u));
-    ctx.fillStyle = '#a65754'; ctx.fillRect(x, y+1, width, width);
-    ctx.fillStyle = (i >> 2) % 2 ? '#ed8488' : '#fff0cb';
-    ctx.fillRect(x, y, width, width);
-  }
-  ctx.restore();
+  if (p < 1) { const hx = cx + Math.cos(head) * (s.r2 - 1), hy = cy + Math.sin(head) * (s.r2 - 1); drawGlow(hx, hy, 6, '#ffe8b0', 0.8); sparkle(hx, hy, '#fff', 1); }
 }
 function drawRays(cam, oy) {
   for (const r of RAYS) {
@@ -814,18 +800,6 @@ function drawParts(emit, cam, oy) {
     if (!!p.emit !== emit || p.delay > 0) continue;
     const x = p.x - cam, y = p.y + oy, c = colOf(p), f = 1 - p.life / p.max;
     switch (p.k) {
-      case 'charm': {
-        ctx.save();
-        ctx.globalAlpha = Math.min(1, p.life / .28);
-        stampCharm(x, y, p.ice ? ICE_FLAKE : CANDY_STAR,
-          p.ice ? '#80b6ce' : p.pink ? '#bd5869' : '#cc903d',
-          p.ice ? '#e8faff' : p.pink ? '#ffbec0' : '#ffe7a0', p.s);
-        ctx.restore(); break;
-      }
-      case 'star': {ctx.save();ctx.globalAlpha=clamp(p.life/.25,0,1);starGem(x,y,p.s,c,p.rot);ctx.restore();break;}
-      case 'snowflake': {ctx.save();ctx.globalAlpha=clamp(p.life/.3,0,1);for(let j=0;j<6;j++){const a=p.rot+j*Math.PI/3;line(x,y,x+Math.cos(a)*p.s*1.7,y+Math.sin(a)*p.s*1.7,c);}ctx.restore();break;}
-      case 'seal': {ctx.save();ctx.globalAlpha=(1-f)*.7;const radius=8+easeOut(f)*p.s;ctx.strokeStyle=c;ctx.lineWidth=.65;ctx.beginPath();ctx.ellipse(x,y,radius,radius*.65,0,0,Math.PI*2);ctx.stroke();for(let j=0;j<8;j++){const a=j*Math.PI/4+f*.7;starGem(x+Math.cos(a)*radius,y+Math.sin(a)*radius*.65,2.4,c,a);}ctx.restore();break;}
-
       case 'px': ctx.fillStyle = c; ctx.fillRect(R(x), R(y), p.s, p.s); break;
       case 'streak': line(x, y, x - p.vx * 0.025, y - p.vy * 0.025, c); pxl(x, y, f < 0.4 ? '#fff' : c); break;
       case 'twinkle': { const on = ((p.life * 14 + p.seed) | 0) % 3; if (on || f < 0.2) sparkle(x, y, c, p.big && on === 1 ? 1 : 0); break; }
