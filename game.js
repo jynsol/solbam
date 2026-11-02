@@ -283,8 +283,11 @@ function noseAnchor(frame) {
   }
   return count ? { x: xSum / count, y: ySum / count } : { x: frame.width / 2, y: 16 };
 }
+function partyArmsUp(time, offset = 0) {
+  return (time + offset) % 1.5 < .75;
+}
 function bambiPose(cam, oy) {
-  const i = bambi.moving ? 4 + (bambi.walkT * 8 | 0) % 4 : bambi.cheer && (S.T * 4 | 0) % 2 ? 11 : (S.T * 2 | 0) % 4;
+  const i = S.party ? (partyArmsUp(S.T, .16) ? 11 : 0) : bambi.moving ? 4 + (bambi.walkT * 8 | 0) % 4 : bambi.cheer && (S.T * 4 | 0) % 2 ? 11 : (S.T * 2 | 0) % 4;
   const sp = CH.bambi.F[i], flip = !!(bambi.moving && bambi.left), n = CH.bambi.noses[i];
   const x = R(bambi.x - sp.width / 2 - cam), y = R(feetY(sp) + oy + bambi.oy);
   return { sp, flip, x, y, noseX: x + (flip ? sp.width - n.x : n.x), noseY: y + n.y };
@@ -644,12 +647,12 @@ function render() {
   for (const q of GUESTS) {
     if (S.T < q.at) continue;
     if (!q.shown) { q.shown = true; puff(q.x, GY - 6, 6); burstTwinkle(q.x, GY - 10, 6, 30, ['#ffd76a', '#fff']); }
-    const sprite = q.c.cheer || q.c;
+    const sprite = partyArmsUp(T, q.seed) && q.c.cheer ? q.c.cheer : q.c;
     drawSp(sprite, q.x - cam - sprite.width / 2, GY + 1 + oy - sprite.height);
 
   }
   drawParts(false, cam, oy);
-  if (sol.visible) { const sp = sol.cheer && (T * 4 | 0) % 2 ? CH.sol.cheer : CH.sol.F[(T * 2 | 0) % 4]; drawSp(sp, sol.x - sp.width / 2 - cam, feetY(sp) + oy - ((T * 1.5 | 0) % 2)); }
+  if (sol.visible) { const sp = S.party ? (partyArmsUp(T, .08) ? CH.sol.cheer : CH.sol.front) : sol.cheer && (T * 4 | 0) % 2 ? CH.sol.cheer : CH.sol.F[(T * 2 | 0) % 4]; drawSp(sp, sol.x - sp.width / 2 - cam, feetY(sp) + oy - (S.party ? 0 : (T * 1.5 | 0) % 2)); }
   const bp = bambiPose(cam, oy);
   if (bambi.visible) drawSp(bp.sp, bp.x, bp.y, bp.flip);
   if (enemy && enemy.alpha > 0) drawEnemy(cam, oy);
@@ -701,7 +704,7 @@ function render() {
 function drawPlayer(cam, oy) {
   const F = PF.F; let sp = F[(S.T * 2 | 0) % 4]; const a = player.atk;
   if (a) sp = a.t < 0.045 ? F[8] : a.t < 0.17 ? F[9] : F[10];
-  else if (player.cheer) sp = F[11];
+  else if (player.cheer) sp = F[S.party && !partyArmsUp(S.T) ? 0 : 11];
   else if (player.moving) sp = F[4 + (player.walkT * 9 | 0) % 4];
   const x = player.x - sp.width / 2 - cam + player.lunge, y = feetY(sp) + oy;
   if (a && a.t < 0.045) cane(x, y, [[12, 24], [12, 23], [11, 22], [11, 21], [10, 20], [10, 19], [10, 18], [11, 17], [12, 17], [13, 18]]);
