@@ -379,14 +379,10 @@ function startAttack() {
   player.atk = { t: 0, kind: player.combo, slash: false, hit: false, fin: enemy.hp === 1 };
 }
 function spawnSlash(kind, fin) {
-  const cx = player.x + 5, cy = GY - 17;
+  const target = hitPoint();
+  SLASH.push({ x: player.x + 8, y: GY - 11, tx: target.x, ty: target.y,
+    lift: kind === 1 ? 4 : fin ? -17 : -11, t: 0, dur: .16 });
 
-  if (fin) {
-    SLASH.push({ x: cx + 3, y: cy - 2, r1: 6, r2: 22, a0: -2.1, a1: 1.2, t: 0, dur: 0.12, big: true });
-
-  } else if (kind === 1) SLASH.push({ x: cx, y: cy, r1: 5, r2: 15, a0: 1.3, a1: -1.7, t: 0, dur: 0.1 });
-  else if (kind === 2) SLASH.push({ x: cx, y: cy, r1: 5, r2: 18, a0: -2.4, a1: 1.1, t: 0, dur: 0.11, big: true });
-  else SLASH.push({ x: cx, y: cy, r1: 5, r2: 15, a0: -1.9, a1: 1.0, t: 0, dur: 0.1 });
 }
 function hitPoint() { return { x: enemy.x - enemy.w * 0.2, y: GY - enemy.h * 0.55 + enemy.oy }; }
 function doHit(a) {
@@ -397,14 +393,7 @@ function doHit(a) {
   if (enemy.hp > 0) {
     S.freeze = big ? .055 : .035;
     shake(1, .08);
-    const contactX = hx - 5, contactY = hy + 4;
-    flareP(contactX, contactY, big ? 4 : 3, .09);
-    for (let i = 0; i < (big ? 4 : 3); i++) {
-      part({ k: 'star', x: contactX, y: contactY, vx: -8 - i * 5,
-        vy: -22 + i * 11, life: .22 + i * .025, s: 1.5, rot: i, vr: 1,
-        cols: ['#f7d389'], emit: true });
-    }
-    vlight(contactX, contactY, 22, .45, .16);
+    candyImpact(hx, hy, big ? 1.2 : 1);
   } else finisher(hx, hy);
 }
 function finisher(hx, hy) {
@@ -413,9 +402,7 @@ function finisher(hx, hy) {
   shake(2, .17);
   S.ts = .55;
   tween(.45, p => { S.ts = .55 + .45 * p; });
-  flareP(hx - 5, hy + 3, 5, .14);
-  burstTwinkle(hx - 5, hy + 3, 6, 26, ['#f4d48d', '#fff0ce']);
-  vlight(hx, hy, 32, .65, .32);
+  candyImpact(hx, hy, 1.6);
   enemy.state = 'dying'; enemy.dieAt = 0;
 }
 function dissolve(mode) {
@@ -770,26 +757,47 @@ function drawHUD() {
     else drawSp(ENVELOPE_EMPTY, x, y);
   }
 }
+const CANDY_STAR = ['...1...', '..121..', '1112111', '.12221.', '..222..', '.12121.', '.11.11.'];
+const ICE_FLAKE = ['..2..','1.2.1','.121.','22222','.121.','1.2.1','..2..'];
+function stampCharm(x, y, rows, edge, fill, size) {
+  const left = R(x - rows[0].length * size / 2), top = R(y - rows.length * size / 2);
+  for (let row = 0; row < rows.length; row++) {
+    for (let col = 0; col < rows[row].length; col++) {
+      const pixel = rows[row][col];
+      if (pixel === '.') continue;
+      ctx.fillStyle = pixel === '1' ? edge : fill;
+      ctx.fillRect(left + col * size, top + row * size, size, size);
+    }
+  }
+}
+function candyImpact(x, y, power) {
+  part({ k: 'charm', x, y, life: .28, s: power, emit: true });
+  const count = Math.round(5 * power);
+  for (let i = 0; i < count; i++) {
+    const angle = Math.PI * 2 * i / count - 1.8;
+    part({ k: 'charm', x, y, vx: Math.cos(angle) * 38 * power,
+      vy: Math.sin(angle) * 28 * power - 14, drag: .975, g: 30,
+      life: .58 + (i % 3) * .14, delay: .045 + i * .013,
+      ice: i % 3 === 1, pink: i % 3 === 2, s: .6, emit: true });
+  }
+  vlight(x, y, 32 * power, .85, .32);
+}
 function drawSlash(s, cam, oy) {
-  if (s.t < 0) return;
-  const p = clamp(s.t / s.dur, 0, 1), dir = Math.sign(s.a1 - s.a0);
-  const head = s.a0 + (s.a1 - s.a0) * easeOut(p);
-  const tp = clamp((s.t - s.dur * .35) / (s.dur * 1.6), 0, 1);
-  const tail = s.a0 + (s.a1 - s.a0) * easeOut(tp), span = Math.abs(head - tail);
-  if (span < .02) return;
-  const x=s.x-cam,y=s.y+oy,fade=clamp((2.6*s.dur-s.t)/s.dur,0,1);
-  ctx.save();ctx.globalAlpha=fade;
-  // Layered curved ribbons: gold rim, ivory core, cranberry inner trail.
-  const ribbon=(outer,width,color)=>{
-    ctx.fillStyle=color;ctx.beginPath();
-    for(let j=0;j<=32;j++){const u=j/32,a=tail+(head-tail)*u;const r=outer;const px=x+Math.cos(a)*r,py=y+Math.sin(a)*r;j?ctx.lineTo(px,py):ctx.moveTo(px,py);}
-    for(let j=32;j>=0;j--){const u=j/32,a=tail+(head-tail)*u,r=outer-width*Math.sin(u*Math.PI*.85);ctx.lineTo(x+Math.cos(a)*r,y+Math.sin(a)*r);}ctx.closePath();ctx.fill();
-  };
-  ribbon(s.r2+1,s.big?3.8:2.8,'#efba59');
-  ribbon(s.r2,s.big?2.5:1.8,'#fff7d9');
-  ribbon(s.r2-1.4,s.big?1.3:.85,'#ce5269');
+  const head = clamp(s.t / .035, 0, 1);
+  const tail = clamp((s.t - .065) / .28, 0, 1);
+  if (tail >= head) return;
+  ctx.save();
+  ctx.globalAlpha = 1 - tail;
+  for (let i = Math.floor(tail * 32); i <= Math.floor(head * 32); i++) {
+    const u = i / 32;
+    const x = R(s.x + (s.tx - s.x) * u - cam);
+    const y = R(s.y + (s.ty - s.y) * u + 4 * u * (1-u) * s.lift + oy);
+    const width = 1 + R(2 * Math.sin(Math.PI*u));
+    ctx.fillStyle = '#a65754'; ctx.fillRect(x, y+1, width, width);
+    ctx.fillStyle = (i >> 2) % 2 ? '#ed8488' : '#fff0cb';
+    ctx.fillRect(x, y, width, width);
+  }
   ctx.restore();
-  if(p<1){const hx=x+Math.cos(head)*(s.r2-1),hy=y+Math.sin(head)*(s.r2-1);drawGlow(hx,hy,7,'#ffe1a0',.65);starGem(hx,hy,2.5,'#fff8df',head);}
 }
 function drawRays(cam, oy) {
   for (const r of RAYS) {
@@ -803,6 +811,14 @@ function drawParts(emit, cam, oy) {
     if (!!p.emit !== emit || p.delay > 0) continue;
     const x = p.x - cam, y = p.y + oy, c = colOf(p), f = 1 - p.life / p.max;
     switch (p.k) {
+      case 'charm': {
+        ctx.save();
+        ctx.globalAlpha = Math.min(1, p.life / .28);
+        stampCharm(x, y, p.ice ? ICE_FLAKE : CANDY_STAR,
+          p.ice ? '#80b6ce' : p.pink ? '#bd5869' : '#cc903d',
+          p.ice ? '#e8faff' : p.pink ? '#ffbec0' : '#ffe7a0', p.s);
+        ctx.restore(); break;
+      }
       case 'star': {ctx.save();ctx.globalAlpha=clamp(p.life/.25,0,1);starGem(x,y,p.s,c,p.rot);ctx.restore();break;}
       case 'snowflake': {ctx.save();ctx.globalAlpha=clamp(p.life/.3,0,1);for(let j=0;j<6;j++){const a=p.rot+j*Math.PI/3;line(x,y,x+Math.cos(a)*p.s*1.7,y+Math.sin(a)*p.s*1.7,c);}ctx.restore();break;}
       case 'seal': {ctx.save();ctx.globalAlpha=(1-f)*.7;const radius=8+easeOut(f)*p.s;ctx.strokeStyle=c;ctx.lineWidth=.65;ctx.beginPath();ctx.ellipse(x,y,radius,radius*.65,0,0,Math.PI*2);ctx.stroke();for(let j=0;j<8;j++){const a=j*Math.PI/4+f*.7;starGem(x+Math.cos(a)*radius,y+Math.sin(a)*radius*.65,2.4,c,a);}ctx.restore();break;}
