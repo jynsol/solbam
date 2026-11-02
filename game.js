@@ -9,6 +9,7 @@ const pick = a => a[Math.floor(Math.random() * a.length)];
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map(v => (v + 0.5) / 16);
 const bay = (x, y) => BAYER[(x & 3) + ((y & 3) << 2)];
+const RENDER_SCALE = 3;
 const LW = 120; let LH = 240, GY = 154;
 const darkCv = mkCanvas(1, 1), darkCtx = darkCv.getContext('2d');
 let darkImg, lightBuf, skyCv = mkCanvas(1, 1), groundCv = mkCanvas(1, 1);
@@ -16,13 +17,13 @@ let darkImg, lightBuf, skyCv = mkCanvas(1, 1), groundCv = mkCanvas(1, 1);
 /* ---------- 세계 배치 ---------- */
 const EV = [{ x: 240, type: 'ginger' }, { x: 500, type: 'snow' }, { x: 760, type: 'elf' }];
 const SOL_X = 630, END_X = 966, TREE_X = END_X + 56;
-const AMB = [0.84, 0.72, 0.6, 0.48];
+const AMB = [0.9, 0.62, 0.34, 0.12];
 const LIT_LIMIT = [EV[1].x + 30, EV[2].x + 30, TREE_X - 50];
 
 function resize() {
   const r = app.getBoundingClientRect();
   LH = clamp(R(LW * r.height / r.width), 180, 300);
-  cv.width = LW; cv.height = LH; GY = R(LH * 0.64);
+  cv.width = LW * RENDER_SCALE; cv.height = LH * RENDER_SCALE; ctx.setTransform(RENDER_SCALE, 0, 0, RENDER_SCALE, 0, 0); GY = R(LH * 0.64);
   darkCv.width = LW; darkCv.height = LH; darkImg = darkCtx.createImageData(LW, LH);
   for (let i = 0; i < LW * LH; i++) { darkImg.data[i * 4] = 9; darkImg.data[i * 4 + 1] = 11; darkImg.data[i * 4 + 2] = 24; }
   lightBuf = new Float32Array(LW * LH);
@@ -98,7 +99,7 @@ function loadImgs() {
   const TT = ['bubble', 'large', 'pico', 'pine', 'slim', 'smallpine', 'spruce', 'thick', 'tiny', 'tri'], PP = ['cold', 'teal', 'gteal', 'green', 'night'];
   const trees = TT.flatMap(t => PP.map(p => 'trees/' + t + '_' + p));
   return Promise.all([...trees, 'bunny', 'player', 'sol', 'bambi', 'en_fuzz', 'en_slime', 'en_mush', 'guests'].map(n => new Promise(res => {
-    const im = new Image(); im.onload = () => { TREE_IMG[n] = im; res(); }; im.onerror = () => res(); im.src = 'img/' + (n === 'player' ? 'player-winter-v1' : n) + '.png';
+    const im = new Image(); im.onload = () => { TREE_IMG[n] = im; res(); }; im.onerror = () => res(); im.src = 'img/' + (['player', 'sol', 'bambi'].includes(n) ? n + '-winter-v1' : n) + '.png';
   })));
 }
 // 그림에서 잘라낸 나무 → 색 변형/좌우 반전 + 전구 자리 계산
@@ -241,11 +242,38 @@ function cells(img, n) { const w = img.width / n, out = []; for (let i = 0; i < 
 function toCanvas(img) { const c = mkCanvas(img.width, img.height); c.getContext('2d').drawImage(img, 0, 0); return c; }
 function setupSprites() {
   for (const k of ['player', 'sol', 'bambi']) {
-    const F = cells(TREE_IMG[k], 12);
+    const F = cells(TREE_IMG[k], 12).map(hires => {
+      const frame = mkCanvas(32, 32), g = frame.getContext('2d');
+      g.imageSmoothingEnabled = false; g.drawImage(hires, 0, 0, 32, 32);
+      frame.hires = hires; return frame;
+    });
     CH[k] = { F, front: F[0], idle: F[0], walkA: F[4], walkB: F[6], wind: F[k === 'player' ? 8 : 6], swing: F[k === 'player' ? 9 : 7], cheer: F[11] };
   }
   EN.fuzz = toCanvas(TREE_IMG.en_fuzz); EN.slime = toCanvas(TREE_IMG.en_slime); EN.mush = toCanvas(TREE_IMG.en_mush);
+  CH.bambi.noses = CH.bambi.F.map(noseAnchor);
   GUESTF = cells(TREE_IMG.guests, 8);
+}
+// The nose is the highest red cluster, above the scarf, in each frame.
+function noseAnchor(frame) {
+  const { data } = frame.getContext('2d').getImageData(0, 0, frame.width, frame.height);
+  let top = -1, xSum = 0, ySum = 0, count = 0;
+  for (let y = 0; y < frame.height; y++) {
+    if (top >= 0 && y > top + 1) break;
+    for (let x = 0; x < frame.width; x++) {
+      const i = (y * frame.width + x) * 4;
+      if (data[i + 3] && data[i] > 150 && data[i + 1] < 110 && data[i + 2] < 110) {
+        if (top < 0) top = y;
+        xSum += x + 0.5; ySum += y + 0.5; count++;
+      }
+    }
+  }
+  return count ? { x: xSum / count, y: ySum / count } : { x: frame.width / 2, y: 16 };
+}
+function bambiPose(cam, oy) {
+  const i = bambi.moving ? 4 + (bambi.walkT * 8 | 0) % 4 : bambi.cheer && (S.T * 4 | 0) % 2 ? 11 : (S.T * 2 | 0) % 4;
+  const sp = CH.bambi.F[i], flip = !!(bambi.moving && bambi.left), n = CH.bambi.noses[i];
+  const x = R(bambi.x - sp.width / 2 - cam), y = R(feetY(sp) + oy + bambi.oy);
+  return { sp, flip, x, y, noseX: x + (flip ? sp.width - n.x : n.x), noseY: y + n.y };
 }
 const S = {
   mode: 'title', cam: 0, camLock: null, amb: 0.3, pieces: 0, holding: false, walkTo: 0, walkRes: null, tapRes: null,
@@ -487,8 +515,35 @@ function update(rdt) {
 /* ---------- 렌더 ---------- */
 function drawSp(img, x, y, flip, alpha) {
   x = R(x); y = R(y); if (alpha != null) ctx.globalAlpha = alpha;
-  if (flip) { ctx.save(); ctx.translate(x + img.width, y); ctx.scale(-1, 1); ctx.drawImage(img, 0, 0); ctx.restore(); } else ctx.drawImage(img, x, y);
+  if (flip) { ctx.save(); ctx.translate(x + img.width, y); ctx.scale(-1, 1); ctx.drawImage(img.hires || img, 0, 0, img.width, img.height); ctx.restore(); } else ctx.drawImage(img.hires || img, x, y, img.width, img.height);
   ctx.globalAlpha = 1;
+}
+// Garlands, baubles and presents accumulate as the forest is restored.
+function decorateTree(tree, bulbs, x, oy, level, centerpiece) {
+  if (!level || (!centerpiece && !bulbs.some(b => b.on && S.T >= b.at))) return;
+  ctx.save();
+  ctx.globalAlpha = centerpiece ? 1 : clamp((S.T - S.decorAt) / 1.2, 0, 1);
+  ctx.strokeStyle = '#c4a35d'; ctx.lineWidth = 0.65;
+  for (let j = 1; j < bulbs.length; j++) {
+    const a = bulbs[j - 1], b = bulbs[j];
+    if (Math.abs(a.ly - b.ly) > 5 || b.lx <= a.lx) continue;
+    ctx.beginPath(); ctx.moveTo(x + a.lx, GY + 3 + a.ly + oy);
+    ctx.quadraticCurveTo(x + (a.lx + b.lx) / 2, GY + 6 + Math.max(a.ly, b.ly) + oy, x + b.lx, GY + 3 + b.ly + oy); ctx.stroke();
+  }
+  if (level >= 2) bulbs.forEach((b, j) => {
+    if (j % 2) return;
+    const bx = R(x + b.lx), by = GY + 7 + b.ly + oy;
+    ctx.fillStyle = '#a58852'; ctx.fillRect(bx, by - 2, 1, 2);
+    ctx.fillStyle = ['#da5a6d', '#e5b85b', '#70b9aa'][j % 3];
+    ctx.fillRect(bx - 1, by, 3, 3); ctx.fillStyle = '#fff0c7'; ctx.fillRect(bx - 1, by, 1, 1);
+  });
+  if (level >= 3 && !centerpiece) {
+    const bx = R(x + tree.w / 4), by = GY - 3 + oy;
+    ctx.fillStyle = '#b74860'; ctx.fillRect(bx, by, 7, 6);
+    ctx.fillStyle = '#f4d283'; ctx.fillRect(bx + 3, by, 1, 6); ctx.fillRect(bx, by + 1, 7, 1);
+    ctx.fillRect(bx + 1, by - 1, 2, 1); ctx.fillRect(bx + 4, by - 1, 2, 1);
+  }
+  ctx.restore();
 }
 const whiteCache = new Map();
 function whiteOf(img) { if (whiteCache.has(img)) return whiteCache.get(img); const c = mkCanvas(img.width, img.height), g = c.getContext('2d'); g.drawImage(img, 0, 0); g.globalCompositeOperation = 'source-in'; g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); whiteCache.set(img, c); return c; }
@@ -526,12 +581,14 @@ function render() {
   for (const t of NEAR) {
     const xx = t.x - cam; if (xx < -30 || xx > LW + 30) continue;
     ctx.drawImage(t.pine.cv, R(xx - t.pine.ax), GY - t.pine.h + 3 + oy);
+    decorateTree(t.pine, t.bulbs, xx, oy, S.festival || 0, false);
     for (const b of t.bulbs) { const bx = R(xx + b.lx), by = GY + 3 + b.ly + oy; if (b.on && T >= b.at) lit.push(bx, by, b); else { ctx.fillStyle = '#1a2a33'; ctx.fillRect(bx, by, 1, 1); } }
   }
   if (BIG.tree) {
     const t = BIG.tree, xx = TREE_X - cam;
     if (xx > -60 && xx < LW + 60) {
       ctx.drawImage(t.cv, R(xx - t.ax), GY - t.h + 3 + oy);
+      decorateTree(t, t.bulbs, xx, oy, 3, true);
       for (const o of t.orn) { const ox = R(xx + o.lx), oy2 = GY + 3 + o.ly + oy; ctx.fillStyle = OL; ctx.fillRect(ox - 1, oy2, 4, 2); ctx.fillRect(ox, oy2 - 1, 2, 4); ctx.fillStyle = o.col; ctx.fillRect(ox, oy2, 2, 2); ctx.fillStyle = '#fff'; ctx.fillRect(ox, oy2, 1, 1); }
       for (const b of t.bulbs) { const bx = R(xx + b.lx), by = GY + 3 + b.ly + oy; if (b.on && T >= b.at) lit.push(bx, by, b); else { ctx.fillStyle = '#1a2a33'; ctx.fillRect(bx, by, 1, 1); } }
       // 선물 상자
@@ -553,8 +610,9 @@ function render() {
     drawSp(q.c, q.x - q.c.width / 2 - cam, GY - q.c.height + 1 + oy - R(hop));
   }
   drawParts(false, cam, oy);
-  if (sol.visible) { const sp = sol.cheer && (T * 4 | 0) % 2 ? CH.sol.cheer : CH.sol.F[(T * 2 | 0) % 4]; drawSp(sp, sol.x - 8 - cam, feetY(sp) + oy - ((T * 1.5 | 0) % 2)); }
-  if (bambi.visible) { const sp = bambi.moving ? CH.bambi.F[4 + (bambi.walkT * 8 | 0) % 4] : bambi.cheer && (T * 4 | 0) % 2 ? CH.bambi.cheer : CH.bambi.F[(T * 2 | 0) % 4]; drawSp(sp, bambi.x - 8 - cam, feetY(sp) + oy + bambi.oy, bambi.moving && bambi.left); }
+  if (sol.visible) { const sp = sol.cheer && (T * 4 | 0) % 2 ? CH.sol.cheer : CH.sol.F[(T * 2 | 0) % 4]; drawSp(sp, sol.x - sp.width / 2 - cam, feetY(sp) + oy - ((T * 1.5 | 0) % 2)); }
+  const bp = bambiPose(cam, oy);
+  if (bambi.visible) drawSp(bp.sp, bp.x, bp.y, bp.flip);
   if (enemy && enemy.alpha > 0) drawEnemy(cam, oy);
   if (player.visible && PF) drawPlayer(cam, oy);
   if (item && item.visible) { const bob = item.fly ? 0 : R(Math.sin(item.t * 4) * 1.5); drawSp(item.sp, item.x - item.sp.width / 2 - cam, item.y - item.sp.height / 2 + bob + oy); }
@@ -565,7 +623,7 @@ function render() {
   if (player.visible && S.mode !== 'custom') addL(player.x - cam, GY - 12 + oy, 38 + S.pieces * 7, 1);
   if (S.mode === 'custom') addL(LW / 2, LH * 0.25, 70, 1.2);
   if (enemy && enemy.alpha > 0) addL((player.x + enemy.x) / 2 - cam, GY - 12 + oy, 54, 0.55);
-  const noseX = bambi.x - 8 - cam + 8.5, noseY = GY - 24 + 12.5 + oy;
+  const { noseX, noseY } = bp;
   if (bambi.visible) addL(noseX, noseY, 28, 0.75 + 0.15 * Math.sin(T * 5));
   for (let i = 0; i < lit.length; i += 3) { const b = lit[i + 2]; addL(lit[i], lit[i + 1], BIG.lit ? 14 : 11, 0.42 * (0.8 + 0.2 * Math.sin(T * 3 + b.seed))); }
   for (const v of VL) addL(v.x - cam, v.y + oy, v.r, v.i * (v.life / v.max));
@@ -580,7 +638,7 @@ function render() {
     const b = lit[i + 2], tw = Math.sin(T * 3 + b.seed), age = T - b.at;
     ctx.fillStyle = b.col; ctx.fillRect(lit[i], lit[i + 1], 1, 1);
     if (tw > 0.85) sparkle(lit[i], lit[i + 1], '#ffffff', 1);
-    drawGlow(lit[i], lit[i + 1], 4, b.col, 0.6 + 0.3 * tw);
+    drawGlow(lit[i], lit[i + 1], 6, b.col, 0.65 + 0.2 * tw);
     if (age < 0.25) flareAt(lit[i], lit[i + 1], R(5 * (1 - age / 0.25)) + 1, '#fff', b.col);
   }
   if (bambi.visible) { drawGlow(noseX, noseY, 5, '#ff3344', 0.85 + 0.15 * Math.sin(T * 5)); }
@@ -680,11 +738,12 @@ function drawParts(emit, cam, oy) {
 const dlg = $('#dlg'), dlgN = $('#dlgName'), dlgT = $('#dlgText'), dlgX = $('#dlgNext'), dlgP = $('#dlgPic');
 let dlgState = null;
 function portrait(name) {
-  const g = dlgP.getContext('2d'); g.clearRect(0, 0, 22, 22); g.imageSmoothingEnabled = false;
+  dlgP.width = dlgP.height = 66; const g = dlgP.getContext('2d'); g.setTransform(3, 0, 0, 3, 0, 0); g.clearRect(0, 0, 22, 22); g.imageSmoothingEnabled = false;
   const src = { '밤비': CH.bambi.F[0], '솔': CH.sol.F[0], '솔 & 밤비': CH.sol.cheer, '털뭉치': EN.fuzz, '말랑 슬라임': EN.slime, '장난꾸러기 버섯': EN.mush, '???': CH.sol.F[0] }[name];
   if (!src) return;
   const h = Math.min(22, src.height), dx = R((22 - src.width) / 2);
-  g.drawImage(src, 0, 0, src.width, h, dx, R((22 - h) / 2) + 1, src.width, h);
+  if (src.width === 32 && ['밤비', '솔', '솔 & 밤비', '???'].includes(name)) g.drawImage(src.hires || src, 12, 9, 72, 66, 0, 1, 22, 20);
+  else g.drawImage(src, 0, 0, src.width, h, dx, R((22 - h) / 2) + 1, src.width, h);
   if (name === '???') { g.globalCompositeOperation = 'source-in'; g.fillStyle = '#3c4566'; g.fillRect(0, 0, 22, 22); g.globalCompositeOperation = 'source-over'; }
 }
 function say(name, text) {
@@ -738,6 +797,7 @@ function loadSaved() {
 }
 const saveLook = () => { try { localStorage.setItem('solbam_look', JSON.stringify(look)); } catch (e) {} };
 function setScene(kind) {
+  S.festival = kind === 'title' ? 3 : 0; S.decorAt = -10;
   if (kind === 'title') {
     S.camLock = TREE_X - LW / 2; S.cam = S.camLock; S.amb = 0.3; BIG.lit = true; BIG.star = true;
     BIG.tree.bulbs.forEach(b => { b.on = true; b.at = 0; }); NEAR.forEach(t => t.bulbs.forEach(b => { b.on = true; b.at = 0; }));
@@ -830,8 +890,9 @@ async function encounter(i) {
     px = e.x; e.alpha = 0; e.dizzy = false; await wait(500);
   }
   enemy = null;
-  await pieceGet(i, px, GY - 22);
   await lightUp(i);
+  await pieceGet(i, px, GY - 22);
+  S.mode = 'walk';
 }
 async function pieceGet(i, x, y) {
   for (let k = 0; k < 26; k++) { const a = k / 26 * 6.283, r = rand(22, 34); part({ k: 'conv', x: x + Math.cos(a) * r, y: y + Math.sin(a) * r, x0: x + Math.cos(a) * r, y0: y + Math.sin(a) * r, tx: x, ty: y, cx: Math.cos(a + 1.6) * 8, cy: Math.sin(a + 1.6) * 8, life: rand(0.5, 0.7), cols: [pick(['#ffd76a', '#ffffff', '#ff9fc0', '#5cff9a'])], emit: true }); }
@@ -859,9 +920,16 @@ function showPiece(i) {
   });
 }
 async function lightUp(i) {
-  const a0 = S.amb, a1 = AMB[i + 1]; tween(1.6, p => { S.amb = a0 + (a1 - a0) * p; }, easeIO);
-  for (const t of NEAR) { if (t.x > LIT_LIMIT[i]) continue; t.bulbs.forEach((b, j) => { if (!b.on) { b.on = true; b.at = S.T + Math.max(0, t.x - player.x + 40) * 0.006 + j * 0.05 + 0.15; } }); }
-  await wait(900); S.mode = 'walk';
+  S.festival = i + 1; S.decorAt = S.T;
+  const a0 = S.amb, a1 = AMB[i + 1]; tween(1.8, p => { S.amb = a0 + (a1 - a0) * p; }, easeIO);
+  ring(player.x, GY - 12, 3, 100, 1.8, ['#fff6ce', '#ffd76a']);
+  burstTwinkle(player.x, GY - 18, 22, 45, ['#ffd76a', '#fff6ce', '#ef8a92']);
+  for (const t of NEAR) {
+    if (t.x > LIT_LIMIT[i]) continue;
+    t.bulbs.forEach((b, j) => { if (!b.on) { b.on = true; b.at = S.T + Math.abs(t.x - player.x) * 0.004 + j * 0.04; } });
+  }
+  for (let k = 0; k < 24 + i * 8; k++) part({ k: 'twinkle', x: S.cam + rand(0, LW), y: GY - rand(15, 95), vx: rand(-3, 3), vy: -rand(3, 9), life: rand(1.4, 2.4), cols: [pick(['#ffd76a', '#fff6ce', '#ee9bad'])], emit: true, delay: k * 0.04 });
+  await wait(2200);
 }
 async function solVoice() {
   S.mode = 'cutscene';
@@ -923,11 +991,11 @@ function showCard() {
   $('#cIntro').textContent = CONFIG.intro; $('#cWhen').innerHTML = CONFIG.when; $('#cWhere').innerHTML = CONFIG.where;
   $('#cPot').textContent = CONFIG.potluck || '포트럭 안내는 곧 알려드릴게요!';
   if (CONFIG.rsvpUrl) $('#bRsvp').classList.remove('hide');
-  const pc = $('#portrait'), g = pc.getContext('2d'); g.imageSmoothingEnabled = false; g.clearRect(0, 0, pc.width, pc.height);
+  const pc = $('#portrait'); pc.width = 240; pc.height = 120; const g = pc.getContext('2d'); g.setTransform(3, 0, 0, 3, 0, 0); g.imageSmoothingEnabled = false; g.clearRect(0, 0, pc.width, pc.height);
   const t = TREE_IMG['trees/pico_green'] ? treeFromImg(TREE_IMG['trees/pico_green']) : genTree({ type: 'pine', h: 30, w: 26, seed: 7, pal: TPAL[0], snowy: true });
   g.drawImage(t.cv, 40 - t.ax, 37 - t.h + 2); g.drawImage(STAR, 35, 0);
   g.fillStyle = '#c4e2f6'; g.fillRect(0, 37, 80, 3); g.fillStyle = '#ffffff'; g.fillRect(0, 37, 80, 1);
-  g.drawImage(CH.sol.cheer, 6, 38 - 25); g.drawImage(CH.player.cheer, 40 - CH.player.cheer.width / 2, 38 - CH.player.cheer.height); g.drawImage(CH.bambi.cheer, 56, 38 - 25);
+  [CH.sol.cheer, CH.player.cheer, CH.bambi.cheer].forEach((sp, i) => g.drawImage(sp.hires || sp, 15 + i * 25 - sp.width / 2, 38 - sp.height, sp.width, sp.height));
   [GUESTF[0], GUESTF[3]].forEach((c, k) => c && g.drawImage(c, k ? 66 : -4, 38 - c.height));
   const c = $('#card'); c.classList.remove('hide'); const pp = c.querySelector('.letter'); pp.classList.remove('pop'); void pp.offsetWidth; pp.classList.add('pop'); c.scrollTop = 0;
 }
