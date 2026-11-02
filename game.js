@@ -17,7 +17,7 @@ let darkImg, lightBuf, skyCv = mkCanvas(1, 1), groundCv = mkCanvas(1, 1);
 /* ---------- 세계 배치 ---------- */
 const EV = [{ x: 240, type: 'ginger' }, { x: 500, type: 'snow' }, { x: 760, type: 'elf' }];
 const SOL_X = 630, END_X = 966, TREE_X = END_X + 56;
-const AMB = [0.9, 0.62, 0.34, 0.12];
+const AMB = [0.9, 0.9, 0.34, 0.12];
 const LIT_LIMIT = [EV[1].x + 30, EV[2].x + 30, TREE_X - 50];
 
 function resize() {
@@ -692,7 +692,7 @@ function render() {
     const xx = t.x - R(cam); if (xx < -30 || xx > LW + 30) continue;
     ctx.drawImage(t.pine.cv, R(xx - t.pine.ax), GY - t.pine.h + 3 + oy);
     decorateTree(t.pine, t.bulbs, xx, oy, S.festival || 0, false, occupied);
-    for (const b of t.bulbs) { const bx = R(xx + b.lx), by = GY + 3 + b.ly + oy; if (b.on && T >= b.at) lit.push(bx, by, b); else { ctx.fillStyle = '#1a2a33'; ctx.fillRect(bx, by, 1, 1); } }
+    for (const b of t.bulbs) { const bx = R(xx + b.lx), by = GY + 3 + b.ly + oy; if (S.festival >= 2 && b.on && T >= b.at) lit.push(bx, by, b); else { ctx.fillStyle = '#1a2a33'; ctx.fillRect(bx, by, 1, 1); } }
   }
   if (BIG.tree) {
     const t = BIG.tree, xx = TREE_X - R(cam);
@@ -700,7 +700,7 @@ function render() {
       drawSp(t.cv, xx - t.ax, GY - t.h + 3 + oy);
       decorateTree(t, t.bulbs, xx, oy, S.festival || 0, true, occupied);
       for (const o of t.orn) { const ox = R(xx + o.lx), oy2 = GY + 3 + o.ly + oy; if (!reserveOrnament(occupied, ox-1, oy2-1, ox+3, oy2+3)) continue; ctx.fillStyle = OL; ctx.fillRect(ox - 1, oy2, 4, 2); ctx.fillRect(ox, oy2 - 1, 2, 4); ctx.fillStyle = o.col; ctx.fillRect(ox, oy2, 2, 2); ctx.fillStyle = '#fff'; ctx.fillRect(ox, oy2, 1, 1); }
-      for (const b of t.bulbs) { const bx = R(xx + b.lx), by = GY + 3 + b.ly + oy; if (b.on && T >= b.at) lit.push(bx, by, b); else { ctx.fillStyle = '#1a2a33'; ctx.fillRect(bx, by, 1, 1); } }
+      for (const b of t.bulbs) { const bx = R(xx + b.lx), by = GY + 3 + b.ly + oy; if (S.festival >= 2 && b.on && T >= b.at) lit.push(bx, by, b); else { ctx.fillStyle = '#1a2a33'; ctx.fillRect(bx, by, 1, 1); } }
       if (S.festival >= 3) {
         drawSp(GIFT, xx - 24, GY + oy + 1 - GIFT.height);
         drawSp(BLUE_PRESENT, xx - 1, GY + oy + 2 - BLUE_PRESENT.height);
@@ -1064,6 +1064,17 @@ function showPiece(i) {
 }
 async function lightUp(i) {
   S.festival = i + 1; S.decorAt = S.T;
+  if (i === 0) {
+    for (const tree of NEAR) {
+      if (tree.x > LIT_LIMIT[0]) continue;
+      for (const bulb of tree.bulbs) {
+        bulb.on = true; // Enables the garland anchors; lamps light from stage two.
+        bulb.at = S.T + Math.abs(tree.x - player.x) * .004;
+      }
+    }
+    await wait(800);
+    return;
+  }
   const a0 = S.amb, a1 = AMB[i + 1]; tween(1.8, p => { S.amb = a0 + (a1 - a0) * p; }, easeIO);
   ring(player.x, GY - 12, 3, 100, 1.8, ['#fff6ce', '#ffd76a']);
   burstTwinkle(player.x, GY - 18, 22, 45, ['#ffd76a', '#fff6ce', '#ef8a92']);
