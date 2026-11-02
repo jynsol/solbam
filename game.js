@@ -553,7 +553,14 @@ function drawSp(img, x, y, flip, alpha) {
   if (flip) { ctx.save(); ctx.translate(x + img.width, y); ctx.scale(-1, 1); ctx.drawImage(img.hires || img, 0, 0, img.width, img.height); ctx.restore(); } else ctx.drawImage(img.hires || img, x, y, img.width, img.height);
   ctx.globalAlpha = 1;
 }
-// Garlands, baubles and presents accumulate as the forest is restored.
+const TREE_BOW = spr([
+  '.dd.....dd.', 'dhhdd.ddhhd', 'dhrrdkdrrhd', 'drrrdkdrrrd',
+  '.ddrdkdrdd.', '...dr.rd...', '..dr...rd..', '..dd...dd..'
+], { d: '#823447', r: '#da535e', h: '#ff9992', k: '#f5c779' }, NO);
+const BLUE_PRESENT = spr([
+  '...dd.dd...', '..dbbdbbd..', '.ddddbdddd.', 'dccccbccccd',
+  'dbbbbhbbbbd','dddddhddddd','.dbbbhbbbd.','.dbbbhbbbd.','.ddddddddd.'
+], { d:'#34456a', b:'#668bd0', c:'#92bce5', h:'#fff0bc' }, NO);
 function decorateTree(tree, bulbs, x, oy, level, centerpiece) {
   if (!level || (!centerpiece && !bulbs.some(b => b.on && S.T >= b.at))) return;
   ctx.save();
@@ -573,7 +580,9 @@ function decorateTree(tree, bulbs, x, oy, level, centerpiece) {
     const palette = ['#cc5064', '#83b9e2', '#cea3de', '#edbd64'];
     ctx.fillStyle = '#c9a56a';
     ctx.fillRect(bx, by - 3, 1, 2);
-    if (level >= 3 && index % 8 === 2) {
+    if (level >= 3 && index % 16 === 4) {
+      drawSp(TREE_BOW, bx - 5, by - 2);
+    } else if (level >= 3 && index % 8 === 2) {
       // Hooked peppermint cane, with alternating cream and berry bands.
       ctx.fillStyle = '#8e394c';
       ctx.fillRect(bx - 2, by - 1, 4, 2);
@@ -667,6 +676,11 @@ function render() {
       decorateTree(t, t.bulbs, xx, oy, S.festival || 0, true);
       for (const o of t.orn) { const ox = R(xx + o.lx), oy2 = GY + 3 + o.ly + oy; ctx.fillStyle = OL; ctx.fillRect(ox - 1, oy2, 4, 2); ctx.fillRect(ox, oy2 - 1, 2, 4); ctx.fillStyle = o.col; ctx.fillRect(ox, oy2, 2, 2); ctx.fillStyle = '#fff'; ctx.fillRect(ox, oy2, 1, 1); }
       for (const b of t.bulbs) { const bx = R(xx + b.lx), by = GY + 3 + b.ly + oy; if (b.on && T >= b.at) lit.push(bx, by, b); else { ctx.fillStyle = '#1a2a33'; ctx.fillRect(bx, by, 1, 1); } }
+      if (S.festival >= 3) {
+        drawSp(GIFT, xx - 24, GY + oy + 1 - GIFT.height);
+        drawSp(BLUE_PRESENT, xx - 1, GY + oy + 2 - BLUE_PRESENT.height);
+        drawSp(GIFT, xx + 16, GY + oy + 3 - GIFT.height);
+      }
 
     }
   }
