@@ -115,6 +115,24 @@ function treeFromImg(img, o = {}) {
   g.putImageData(id, 0, 0);
   const rows = [];
   for (let y = 0; y < h; y++) { let L = -1, Rr = -1; for (let x = 0; x < w; x++) if (d[(y * w + x) * 4 + 3]) { if (L < 0) L = x; Rr = x; } rows.push([L, Rr]); }
+  // Ground foreground roots at the visible trunk rather than the PNG boundary.
+  if (o.tiers) {
+    let bottom = h - 1;
+    while (bottom > 0 && rows[bottom][0] < 0) bottom--;
+    const [left, right] = rows[bottom];
+    if (left >= 0) {
+      const shift = h - bottom;
+      g.clearRect(0, 0, w, h + 2);
+      g.putImageData(id, 0, shift);
+      for (let n = 0; n < shift; n++) rows.unshift([-1, -1]);
+      const width = right - left + 1;
+      g.fillStyle = '#a3bfd6';
+      g.fillRect(left - 2, h + 1, width + 4, 1);
+      g.fillStyle = '#d8eaf4';
+      g.fillRect(left - 1, h, width + 2, 1);
+      g.fillRect(left, h - 1, Math.max(2, Math.floor(width / 3)), 1);
+    }
+  }
   const bulbs = [], ax = Math.floor(w / 2);
   if (o.tiers) o.tiers.forEach(t => {
     const r = Math.floor(t * h), [L, Rr] = rows[r]; if (L < 0 || Rr - L < 6) return;
