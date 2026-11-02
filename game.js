@@ -98,7 +98,7 @@ function loadImgs() {
   const TT = ['bubble', 'large', 'pico', 'pine', 'slim', 'smallpine', 'spruce', 'thick', 'tiny', 'tri'], PP = ['cold', 'teal', 'gteal', 'green', 'night'];
   const trees = TT.flatMap(t => PP.map(p => 'trees/' + t + '_' + p));
   return Promise.all([...trees, 'bunny', 'player', 'sol', 'bambi', 'en_fuzz', 'en_slime', 'en_mush', 'guests'].map(n => new Promise(res => {
-    const im = new Image(); im.onload = () => { TREE_IMG[n] = im; res(); }; im.onerror = () => res(); im.src = 'img/' + n + '.png';
+    const im = new Image(); im.onload = () => { TREE_IMG[n] = im; res(); }; im.onerror = () => res(); im.src = 'img/' + (n === 'player' ? 'player-winter-v1' : n) + '.png';
   })));
 }
 // 그림에서 잘라낸 나무 → 색 변형/좌우 반전 + 전구 자리 계산
@@ -242,7 +242,7 @@ function toCanvas(img) { const c = mkCanvas(img.width, img.height); c.getContext
 function setupSprites() {
   for (const k of ['player', 'sol', 'bambi']) {
     const F = cells(TREE_IMG[k], 12);
-    CH[k] = { F, front: F[0], idle: F[0], walkA: F[4], walkB: F[6], wind: F[6], swing: F[7], cheer: F[11] };
+    CH[k] = { F, front: F[0], idle: F[0], walkA: F[4], walkB: F[6], wind: F[k === 'player' ? 8 : 6], swing: F[k === 'player' ? 9 : 7], cheer: F[11] };
   }
   EN.fuzz = toCanvas(TREE_IMG.en_fuzz); EN.slime = toCanvas(TREE_IMG.en_slime); EN.mush = toCanvas(TREE_IMG.en_mush);
   GUESTF = cells(TREE_IMG.guests, 8);
@@ -596,13 +596,13 @@ function render() {
 }
 function drawPlayer(cam, oy) {
   const F = PF.F; let sp = F[(S.T * 2 | 0) % 4]; const a = player.atk;
-  if (a) sp = a.t < 0.045 ? F[6] : a.t < 0.17 ? F[7] : F[0];
+  if (a) sp = a.t < 0.045 ? F[8] : a.t < 0.17 ? F[9] : F[10];
   else if (player.cheer) sp = F[11];
   else if (player.moving) sp = F[4 + (player.walkT * 9 | 0) % 4];
-  const x = player.x - 8 - cam + player.lunge, y = feetY(sp) + oy;
-  if (a && a.t < 0.045) cane(x, y, [[4, 17], [4, 16], [3, 15], [3, 14], [2, 13], [2, 12], [2, 11], [3, 10], [4, 10], [5, 11]]);
+  const x = player.x - sp.width / 2 - cam + player.lunge, y = feetY(sp) + oy;
+  if (a && a.t < 0.045) cane(x, y, [[12, 24], [12, 23], [11, 22], [11, 21], [10, 20], [10, 19], [10, 18], [11, 17], [12, 17], [13, 18]]);
   drawSp(sp, x, y);
-  if (a && a.t >= 0.045 && a.t < 0.17) cane(x, y, [[13, 18], [14, 18], [15, 18], [16, 18], [17, 18], [18, 18], [19, 17], [20, 17], [21, 18], [21, 19]]);
+  if (a && a.t >= 0.045 && a.t < 0.17) cane(x, y, [[24, 23], [25, 23], [26, 23], [27, 23], [28, 23], [29, 23], [30, 22], [31, 22], [32, 23], [32, 24]]);
 }
 function cane(x, y, pts) { pts.forEach(([px, py], i) => { ctx.fillStyle = (i >> 1) % 2 ? '#e8344a' : '#ffffff'; ctx.fillRect(R(x + px), R(y + py), 1, 1); }); }
 function drawEnemy(cam, oy) {
@@ -927,7 +927,7 @@ function showCard() {
   const t = TREE_IMG['trees/pico_green'] ? treeFromImg(TREE_IMG['trees/pico_green']) : genTree({ type: 'pine', h: 30, w: 26, seed: 7, pal: TPAL[0], snowy: true });
   g.drawImage(t.cv, 40 - t.ax, 37 - t.h + 2); g.drawImage(STAR, 35, 0);
   g.fillStyle = '#c4e2f6'; g.fillRect(0, 37, 80, 3); g.fillStyle = '#ffffff'; g.fillRect(0, 37, 80, 1);
-  g.drawImage(CH.sol.cheer, 6, 38 - 25); g.drawImage(CH.player.cheer, 31, 38 - 25); g.drawImage(CH.bambi.cheer, 56, 38 - 25);
+  g.drawImage(CH.sol.cheer, 6, 38 - 25); g.drawImage(CH.player.cheer, 40 - CH.player.cheer.width / 2, 38 - CH.player.cheer.height); g.drawImage(CH.bambi.cheer, 56, 38 - 25);
   [GUESTF[0], GUESTF[3]].forEach((c, k) => c && g.drawImage(c, k ? 66 : -4, 38 - c.height));
   const c = $('#card'); c.classList.remove('hide'); const pp = c.querySelector('.letter'); pp.classList.remove('pop'); void pp.offsetWidth; pp.classList.add('pop'); c.scrollTop = 0;
 }
@@ -950,3 +950,4 @@ async function init() {
   requestAnimationFrame(t => { last = t; loop(t); });
 }
 init();
+
