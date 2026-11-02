@@ -1,3 +1,5 @@
+> Superseded in part by festive-v2.md: the final boss is now a Christmas house elf; snowball display name is 눈사람. The v1 tree-monster PNG is retained only as an unused previous design.
+
 # Christmas monsters v1
 
 Built-in ImageGen created three original pixel-art sprites: gingerbread cookie (진저 쿠키), snowball (눈송이), Christmas tree imp (꼬마 트리). No external commercial asset pack was used.

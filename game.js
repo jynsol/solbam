@@ -99,7 +99,7 @@ function loadImgs() {
   const TT = ['bubble', 'large', 'pico', 'pine', 'slim', 'smallpine', 'spruce', 'thick', 'tiny', 'tri'], PP = ['cold', 'teal', 'gteal', 'green', 'night'];
   const trees = TT.flatMap(t => PP.map(p => 'trees/' + t + '_' + p));
   return Promise.all([...trees, 'bunny', 'player', 'sol', 'bambi', 'en_fuzz', 'en_slime', 'en_mush'].map(n => new Promise(res => {
-    const im = new Image(); im.onload = () => { TREE_IMG[n] = im; res(); }; im.onerror = () => res(); im.src = 'img/' + (['player', 'sol', 'bambi'].includes(n) ? n + '-winter-v1' : n.startsWith('en_') ? n + '-christmas-v1' : n) + '.png';
+    const im = new Image(); im.onload = () => { TREE_IMG[n] = im; res(); }; im.onerror = () => res(); im.src = 'img/' + (['player', 'sol', 'bambi'].includes(n) ? n + '-winter-v1' : n === 'en_mush' ? 'elf-christmas-v2' : n.startsWith('en_') ? n + '-christmas-v1' : n) + '.png';
   })));
 }
 // 그림에서 잘라낸 나무 → 색 변형/좌우 반전 + 전구 자리 계산
@@ -346,7 +346,7 @@ const flareP = (x, y, L, life, delay) => part({ k: 'flare', x, y, L, life, emit:
 const rays = (x, y, n, len, life, col) => RAYS.push({ x, y, n, len, life, max: life, col: col || '#ffd76a', rot: rand(0, 6) });
 function debris(type, x, y, n) {
   for (let i = 0; i < n; i++) { const a = rand(-2.6, -0.4), v = rand(30, 80);
-    const cols = type === 'ginger' ? [pick(['#2a2438', '#4a4366', '#e0414f'])] : type === 'snow' ? [pick(['#4fd1b5', '#2a9c8a', '#c8fff0'])] : [pick(['#e0414f', '#fff6ea', '#4cbb72'])];
+    const cols = type === 'ginger' ? [pick(['#b97436', '#f2c17e', '#fff1c9'])] : type === 'snow' ? [pick(['#ffffff', '#b5d9ec', '#e0f5ff'])] : [pick(['#e0414f', '#fff6ea', '#4cbb72'])];
     part({ k: 'px', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, g: 220, drag: 0.98, life: rand(0.6, 1.1), cols, ground: true, bounce: 0.3 }); }
 }
 function snowPowder(x, y, n) { for (let i = 0; i < n; i++) part({ k: 'px', x: x + rand(-8, 8), y: y + rand(-12, 8), vx: rand(-40, 40), vy: rand(-50, 0), g: 12, drag: 0.92, life: rand(1.4, 2.6), cols: ['#ffffff', '#e6edff', '#b9c4ef'], wob: rand(2, 5) }); }
@@ -355,8 +355,8 @@ function puff(x, y, n) { for (let i = 0; i < n; i++) { const a = rand(0, 6.28), 
 /* ---------- 전투 ---------- */
 const ENEMY = {
   ginger: { sp: () => EN.fuzz, hp: 4, name: '진저 쿠키', line: '바삭바삭~ 초대장은 내 거야!' },
-  snow:   { sp: () => EN.slime, hp: 5, name: '눈송이', line: '눈이 펑펑… 여긴 못 지나가~' },
-  elf:    { sp: () => EN.mush, hp: 6, name: '꼬마 트리', line: '히히, 들켰다!\n그래도 초대장은 못 줘!' },
+  snow:   { sp: () => EN.slime, hp: 5, name: '눈사람', line: '눈이 펑펑… 여긴 못 지나가~' },
+  elf:    { sp: () => EN.mush, hp: 6, name: '크리스마스 요정', line: '히히, 들켰다!\n그래도 초대장은 못 줘!' },
 };
 function spawnEnemy(i) {
   const e = EV[i], d = ENEMY[e.type], sp = d.sp();
@@ -370,6 +370,7 @@ function startAttack() {
 }
 function spawnSlash(kind, fin) {
   const cx = player.x + 5, cy = GY - 9;
+  holidayBurst(cx + 8, cy - 4, fin ? 2 : 1);
   if (fin) {
     SLASH.push({ x: cx + 3, y: cy - 2, r1: 6, r2: 22, a0: -2.1, a1: 1.2, t: 0, dur: 0.12, big: true });
     SLASH.push({ x: cx + 3, y: cy - 2, r1: 6, r2: 22, a0: 2.0, a1: -1.3, t: -0.06, dur: 0.12, big: true });
@@ -383,6 +384,8 @@ function doHit(a) {
   enemy.hp--; enemy.flash = 0.1; enemy.kb = a.fin ? 7 : 3; enemy.hpShow = 9;
   enemy.broke.push({ i: enemy.hp, t: 0 });
   const big = a.kind === 2;
+  holidayBurst(hx, hy, big ? 2 : 1);
+  part({k:'seal',x:hx,y:hy,s:big?24:15,life:.55,cols:['#ffe2a1'],emit:true});
   if (enemy.hp > 0) {
     S.freeze = big ? 0.085 : 0.06; shake(big ? 3 : 2, big ? 0.18 : 0.12);
     flareP(hx, hy, big ? 12 : 8, 0.16);
@@ -396,7 +399,9 @@ function doHit(a) {
 }
 function finisher(hx, hy) {
   S.mode = 'cutscene'; hideHint();
-  S.freeze = 0.17; flash(0.9); shake(5, 0.4);
+  holidayBurst(hx,hy,3);
+  part({k:'seal',x:hx,y:hy,s:45,life:1.25,cols:['#ffe2a1'],emit:true});
+  S.freeze = 0.14; flash(0.28, '#fff1c9'); shake(3, 0.3);
   S.ts = 0.28; tweens.push({ t: 0, d: 0.9, fn: p => S.ts = 0.28 + 0.72 * p, r: () => {}, ease: x => x * x });
   flareP(hx, hy, 24, 0.45);
   ring(hx, hy, 3, 34, 0.4, ['#ffffff', '#fff1a8', '#ffd25a', '#ff9a3a']);
@@ -455,7 +460,7 @@ function update(rdt) {
         if (e.type === 'ginger') { dissolve('crumble'); e.alpha = 0; }
         else if (e.type === 'snow') {
           dissolve('burst'); snowPowder(e.x, GY - 14, 60); e.alpha = 0;
-          for (let k = 0; k < 24; k++) part({ k: 'px', x: e.x + rand(-6, 6), y: GY - 8, vx: rand(-70, 70), vy: rand(-110, -30), g: 240, life: rand(0.6, 1.1), cols: [pick(['#4fd1b5', '#2a9c8a', '#c8fff0'])], ground: true, bounce: 0.2 });
+          for (let k = 0; k < 24; k++) part({ k: 'px', x: e.x + rand(-6, 6), y: GY - 8, vx: rand(-70, 70), vy: rand(-110, -30), g: 240, life: rand(0.6, 1.1), cols: [pick(['#ffffff', '#b5d9ec', '#e0f5ff'])], ground: true, bounce: 0.2 });
         } else { e.state = 'knocked'; e.kb = 0; e.kbv = 90; }
         if (e.res) { const r = e.res; e.res = null; setTimeout(r, 0); }
       }
@@ -526,13 +531,21 @@ function drawSp(img, x, y, flip, alpha) {
 function decorateTree(tree, bulbs, x, oy, level, centerpiece) {
   if (!level || (!centerpiece && !bulbs.some(b => b.on && S.T >= b.at))) return;
   ctx.save();
-  ctx.globalAlpha = centerpiece ? 1 : clamp((S.T - S.decorAt) / 1.2, 0, 1);
+  ctx.globalAlpha = 1;
   ctx.strokeStyle = '#c4a35d'; ctx.lineWidth = 0.65;
   for (let j = 1; j < bulbs.length; j++) {
     const a = bulbs[j - 1], b = bulbs[j];
     if (Math.abs(a.ly - b.ly) > 5 || b.lx <= a.lx) continue;
     ctx.beginPath(); ctx.moveTo(x + a.lx, GY + 3 + a.ly + oy);
     ctx.quadraticCurveTo(x + (a.lx + b.lx) / 2, GY + 6 + Math.max(a.ly, b.ly) + oy, x + b.lx, GY + 3 + b.ly + oy); ctx.stroke();
+  }
+  if (centerpiece && level >= 2) {
+    for(const fraction of [.3,.48,.66,.82]) {
+      const row=Math.floor((tree.h-2)*fraction), bounds=tree.rows[row];
+      if(!bounds || bounds[0]<0)continue;
+      const left=x+bounds[0]-tree.ax+3,right=x+bounds[1]-tree.ax-3,top=GY+3+row-tree.h+oy;
+      for(let j=0;j<24;j++){const u=j/23,bx=left+(right-left)*u,by=top+Math.sin(u*Math.PI)*5;ctx.fillStyle='#a83d51';ctx.fillRect(R(bx),R(by),2,2);ctx.fillStyle='#e6bd74';ctx.fillRect(R(bx),R(by+2),1,1);}
+    }
   }
   if (level >= 2) bulbs.forEach((b, j) => {
     if (j % 2) return;
@@ -541,13 +554,41 @@ function decorateTree(tree, bulbs, x, oy, level, centerpiece) {
     ctx.fillStyle = ['#da5a6d', '#e5b85b', '#70b9aa'][j % 3];
     ctx.fillRect(bx - 1, by, 3, 3); ctx.fillStyle = '#fff0c7'; ctx.fillRect(bx - 1, by, 1, 1);
   });
-  if (level >= 3 && !centerpiece) {
-    const bx = R(x + tree.w / 4), by = GY - 3 + oy;
-    ctx.fillStyle = '#b74860'; ctx.fillRect(bx, by, 7, 6);
-    ctx.fillStyle = '#f4d283'; ctx.fillRect(bx + 3, by, 1, 6); ctx.fillRect(bx, by + 1, 7, 1);
-    ctx.fillRect(bx + 1, by - 1, 2, 1); ctx.fillRect(bx + 4, by - 1, 2, 1);
+  if (level >= 3) {
+    for (const fraction of [0.38, 0.65]) {
+      const by = GY - tree.h * fraction + oy, bx = R(x);
+      ctx.fillStyle = '#852f49'; ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bx - 5, by - 3); ctx.lineTo(bx - 5, by + 3); ctx.lineTo(bx, by); ctx.lineTo(bx + 5, by - 3); ctx.lineTo(bx + 5, by + 3); ctx.fill();
+      ctx.fillStyle = '#dc6574'; ctx.fillRect(bx - 1, by - 1, 2, 2);
+      line(bx - 1, by + 2, bx - 3, by + 7, '#bd4e63'); line(bx + 1, by + 2, bx + 3, by + 7, '#bd4e63');
+      starGem(bx, by + 10, 2, '#f5d386', 0);
+    }
   }
   ctx.restore();
+}
+// Strings of warm lights and hanging stars transform the forest canopy.
+function drawForestCanopy(cam, oy, lit) {
+  if ((S.festival || 0) < 2) return;
+  for (let i = 1; i < NEAR.length; i++) {
+    const a = NEAR[i - 1], b = NEAR[i];
+    if (b.x < cam - 30 || a.x > cam + LW + 30 || b.x - a.x > 65) continue;
+    if (![a, b].every(t => t.bulbs.some(v => v.on && S.T >= v.at))) continue;
+    const x0 = a.x - cam, x1 = b.x - cam;
+    const y0 = GY - Math.min(72, a.pine.h * .72) + oy, y1 = GY - Math.min(72, b.pine.h * .72) + oy;
+    ctx.strokeStyle = '#7d8d66'; ctx.lineWidth = .75; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.quadraticCurveTo((x0+x1)/2, Math.max(y0,y1)+12, x1,y1); ctx.stroke();
+    for(let j=1;j<8;j++) {
+      const u=j/8, x=x0+(x1-x0)*u, y=(1-u)*(1-u)*y0+2*(1-u)*u*(Math.max(y0,y1)+12)+u*u*y1;
+      const col=j%2?'#ffe2a1':'#f0a3a4';
+      lit.push(R(x), R(y), {col, at: S.decorAt, seed:i+j});
+      if(S.festival>=3 && j%2===0) {line(x,y,x,y+5,'#c0a471');starGem(x,y+7,2.2,'#f1cc79',0);}
+    }
+  }
+}
+function starGem(x,y,r,col,rotation) {
+  ctx.fillStyle=col;ctx.beginPath();
+  for(let i=0;i<10;i++){const a=rotation-Math.PI/2+i*Math.PI/5,d=i%2?r*.45:r;const px=x+Math.cos(a)*d,py=y+Math.sin(a)*d;i?ctx.lineTo(px,py):ctx.moveTo(px,py);}ctx.closePath();ctx.fill();
+}
+function holidayBurst(x,y,strength=1) {
+  for(let i=0;i<10*strength;i++){const a=i/(10*strength)*Math.PI*2,v=rand(15,40);part({k:i%3?'star':'snowflake',x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v-12,g:12,drag:.98,life:rand(.55,1.1),cols:[i%2?'#ffe2a1':'#c5eafa'],rot:a,vr:rand(-2,2),s:rand(1.3,2.5),emit:true});}
 }
 const whiteCache = new Map();
 function whiteOf(img) { if (whiteCache.has(img)) return whiteCache.get(img); const c = mkCanvas(img.width, img.height), g = c.getContext('2d'); g.drawImage(img, 0, 0); g.globalCompositeOperation = 'source-in'; g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); if (img.hires) { c.hires = mkCanvas(img.hires.width, img.hires.height); const h = c.hires.getContext('2d'); h.drawImage(img.hires, 0, 0); h.globalCompositeOperation = 'source-in'; h.fillStyle = '#fff'; h.fillRect(0, 0, c.hires.width, c.hires.height); } whiteCache.set(img, c); return c; }
@@ -582,6 +623,7 @@ function render() {
   const gx = -(((R(cam) % 128) + 128) % 128);
   ctx.drawImage(groundCv, gx, GY + oy); ctx.drawImage(groundCv, gx + 128, GY + oy);
   const lit = [];
+  drawForestCanopy(cam, oy, lit);
   for (const t of NEAR) {
     const xx = t.x - cam; if (xx < -30 || xx > LW + 30) continue;
     ctx.drawImage(t.pine.cv, R(xx - t.pine.ax), GY - t.pine.h + 3 + oy);
@@ -591,12 +633,11 @@ function render() {
   if (BIG.tree) {
     const t = BIG.tree, xx = TREE_X - cam;
     if (xx > -60 && xx < LW + 60) {
-      ctx.drawImage(t.cv, R(xx - t.ax), GY - t.h + 3 + oy);
-      decorateTree(t, t.bulbs, xx, oy, 3, true);
+      drawSp(t.cv, xx - t.ax, GY - t.h + 3 + oy);
+      decorateTree(t, t.bulbs, xx, oy, S.festival || 0, true);
       for (const o of t.orn) { const ox = R(xx + o.lx), oy2 = GY + 3 + o.ly + oy; ctx.fillStyle = OL; ctx.fillRect(ox - 1, oy2, 4, 2); ctx.fillRect(ox, oy2 - 1, 2, 4); ctx.fillStyle = o.col; ctx.fillRect(ox, oy2, 2, 2); ctx.fillStyle = '#fff'; ctx.fillRect(ox, oy2, 1, 1); }
       for (const b of t.bulbs) { const bx = R(xx + b.lx), by = GY + 3 + b.ly + oy; if (b.on && T >= b.at) lit.push(bx, by, b); else { ctx.fillStyle = '#1a2a33'; ctx.fillRect(bx, by, 1, 1); } }
-      // 선물 상자
-      drawSp(GIFT, xx - 26, GY - GIFT.height + 2 + oy); drawSp(GIFT, xx + 15, GY - GIFT.height + 2 + oy);
+
     }
   }
   ctx.fillStyle = '#86a8d0'; for (const f of FOOT) { const xx = R(f.x - cam); if (xx > -2 && xx < LW + 2) ctx.fillRect(xx - 3 + f.alt * 3, GY + 2 + f.alt + oy, 2, 1); }
@@ -648,6 +689,13 @@ function render() {
   if (bambi.visible) { drawGlow(noseX, noseY, 5, '#ff3344', 0.85 + 0.15 * Math.sin(T * 5)); }
   if (item && item.visible) { const bob = item.fly ? 0 : R(Math.sin(item.t * 4) * 1.5); drawGlow(item.x - cam, item.y + oy + bob, 13, '#ffcf6a', 0.8); if ((item.t * 6 | 0) % 3 === 0) sparkle(item.x - cam + 6, item.y - 5 + oy + bob, '#fff', 1); }
   if (BIG.star) { drawGlow(starX, starY, BIG.lit ? 24 : 13, '#ffcf6a', 0.9); if (BIG.lit) flareAt(starX, starY, 7 + R(Math.sin(T * 4) * 2), '#fff', '#ffe08a'); }
+  if (S.festival >= 2) {
+    for(const t of NEAR){const x=t.x-cam;if(x < -20 || x > LW+20 || !t.bulbs.some(b=>b.on&&T>=b.at))continue;
+      for(let j=0;j<S.festival;j++){const phase=T*.45+t.x*.17+j*2.1,px=x+Math.sin(phase)*12,py=GY-t.pine.h*(.3+j*.18)+Math.cos(phase)*4+oy;
+        ctx.save();ctx.globalAlpha=.35+.3*Math.sin(phase)**2;starGem(px,py,1.3,'#ffe3a0',phase);ctx.restore();}
+    }
+  }
+  if(BIG.lit){for(let j=0;j<3;j++){const a=T*.7+j*2.094;starGem(starX+Math.cos(a)*10,starY+Math.sin(a)*5,1.5,'#fff2bd',a);}}
   drawRays(cam, oy);
   for (const s of SLASH) drawSlash(s, cam, oy);
   drawParts(true, cam, oy);
@@ -695,21 +743,27 @@ function drawHUD() {
 }
 function drawSlash(s, cam, oy) {
   if (s.t < 0) return;
-  const p = Math.min(1, s.t / s.dur), dir = Math.sign(s.a1 - s.a0), head = s.a0 + (s.a1 - s.a0) * easeOut(p);
-  const tp = clamp((s.t - s.dur * 0.35) / (s.dur * 1.6), 0, 1), tail = s.a0 + (s.a1 - s.a0) * (1 - Math.pow(1 - tp, 2)), span = Math.abs(head - tail);
-  if (span < 0.02) return;
-  const cx = s.x - cam, cy = s.y + oy;
-  for (let a = tail; dir > 0 ? a <= head : a >= head; a += dir * 0.03) {
-    const along = Math.abs(a - tail) / span, thick = (s.r2 - s.r1) * (0.15 + 0.85 * Math.pow(along, 0.7));
-    for (let r = s.r2 - thick; r <= s.r2; r += 0.6) {
-      const x = R(cx + Math.cos(a) * r), y = R(cy + Math.sin(a) * r);
-      if (along < 0.35 && ((x + y) & 1)) continue;
-      let c = along > 0.88 ? '#ffffff' : r > s.r2 - 0.7 ? '#ffe08a' : ((Math.floor(a * 9 * dir + r * 0.35)) & 1) ? '#ff3b52' : '#fff1ef';
-      if (s.big && r < s.r2 - thick + 1.2) c = '#5cff9a';
-      ctx.fillStyle = c; ctx.fillRect(x, y, 1, 1);
-    }
-  }
-  if (p < 1) { const hx = cx + Math.cos(head) * (s.r2 - 1), hy = cy + Math.sin(head) * (s.r2 - 1); drawGlow(hx, hy, 6, '#ffe8b0', 0.8); sparkle(hx, hy, '#fff', 1); }
+  const p = clamp(s.t / s.dur, 0, 1), dir = Math.sign(s.a1 - s.a0);
+  const head = s.a0 + (s.a1 - s.a0) * easeOut(p);
+  const tp = clamp((s.t - s.dur * .35) / (s.dur * 1.6), 0, 1);
+  const tail = s.a0 + (s.a1 - s.a0) * easeOut(tp), span = Math.abs(head - tail);
+  if (span < .02) return;
+  const x=s.x-cam,y=s.y+oy,fade=clamp((2.6*s.dur-s.t)/s.dur,0,1);
+  ctx.save();ctx.globalAlpha=fade;
+  // Layered curved ribbons: gold rim, ivory core, cranberry inner trail.
+  const ribbon=(outer,width,color)=>{
+    ctx.fillStyle=color;ctx.beginPath();
+    for(let j=0;j<=32;j++){const u=j/32,a=tail+(head-tail)*u;const r=outer;const px=x+Math.cos(a)*r,py=y+Math.sin(a)*r;j?ctx.lineTo(px,py):ctx.moveTo(px,py);}
+    for(let j=32;j>=0;j--){const u=j/32,a=tail+(head-tail)*u,r=outer-width*Math.sin(u*Math.PI*.85);ctx.lineTo(x+Math.cos(a)*r,y+Math.sin(a)*r);}ctx.closePath();ctx.fill();
+  };
+  ribbon(s.r2+1,s.big?7:5,'#efba59');
+  ribbon(s.r2,s.big?5.4:3.6,'#fff7d9');
+  ribbon(s.r2-3,s.big?2.2:1.5,'#ce5269');
+  ctx.strokeStyle='#a7e0da';ctx.lineWidth=.6;ctx.beginPath();
+  for(let j=0;j<=24;j++){const a=tail+(head-tail)*j/24,px=x+Math.cos(a)*(s.r2+3),py=y+Math.sin(a)*(s.r2+3);j?ctx.lineTo(px,py):ctx.moveTo(px,py);}ctx.stroke();
+  for(let j=0;j<4;j++){const a=tail+(head-tail)*j/3,r=s.r2+3;starGem(x+Math.cos(a)*r,y+Math.sin(a)*r,1+j*.5,'#ffe2a1',a);}
+  ctx.restore();
+  if(p<1){const hx=x+Math.cos(head)*(s.r2-1),hy=y+Math.sin(head)*(s.r2-1);drawGlow(hx,hy,7,'#ffe1a0',.65);starGem(hx,hy,2.5,'#fff8df',head);}
 }
 function drawRays(cam, oy) {
   for (const r of RAYS) {
@@ -723,6 +777,10 @@ function drawParts(emit, cam, oy) {
     if (!!p.emit !== emit || p.delay > 0) continue;
     const x = p.x - cam, y = p.y + oy, c = colOf(p), f = 1 - p.life / p.max;
     switch (p.k) {
+      case 'star': {ctx.save();ctx.globalAlpha=clamp(p.life/.25,0,1);starGem(x,y,p.s,c,p.rot);ctx.restore();break;}
+      case 'snowflake': {ctx.save();ctx.globalAlpha=clamp(p.life/.3,0,1);for(let j=0;j<6;j++){const a=p.rot+j*Math.PI/3;line(x,y,x+Math.cos(a)*p.s*1.7,y+Math.sin(a)*p.s*1.7,c);}ctx.restore();break;}
+      case 'seal': {ctx.save();ctx.globalAlpha=(1-f)*.7;const radius=8+easeOut(f)*p.s;ctx.strokeStyle=c;ctx.lineWidth=.65;ctx.beginPath();ctx.ellipse(x,y,radius,radius*.65,0,0,Math.PI*2);ctx.stroke();for(let j=0;j<8;j++){const a=j*Math.PI/4+f*.7;starGem(x+Math.cos(a)*radius,y+Math.sin(a)*radius*.65,2.4,c,a);}ctx.restore();break;}
+
       case 'px': ctx.fillStyle = c; ctx.fillRect(R(x), R(y), p.s, p.s); break;
       case 'streak': line(x, y, x - p.vx * 0.025, y - p.vy * 0.025, c); pxl(x, y, f < 0.4 ? '#fff' : c); break;
       case 'twinkle': { const on = ((p.life * 14 + p.seed) | 0) % 3; if (on || f < 0.2) sparkle(x, y, c, p.big && on === 1 ? 1 : 0); break; }
@@ -743,7 +801,7 @@ const dlg = $('#dlg'), dlgN = $('#dlgName'), dlgT = $('#dlgText'), dlgX = $('#dl
 let dlgState = null;
 function portrait(name) {
   dlgP.width = dlgP.height = 66; const g = dlgP.getContext('2d'); g.setTransform(3, 0, 0, 3, 0, 0); g.clearRect(0, 0, 22, 22); g.imageSmoothingEnabled = false;
-  const src = { '밤비': CH.bambi.F[0], '솔': CH.sol.F[0], '솔 & 밤비': CH.sol.cheer, '진저 쿠키': EN.fuzz, '눈송이': EN.slime, '꼬마 트리': EN.mush, '???': CH.sol.F[0] }[name];
+  const src = { '밤비': CH.bambi.F[0], '솔': CH.sol.F[0], '솔 & 밤비': CH.sol.cheer, '진저 쿠키': EN.fuzz, '눈사람': EN.slime, '크리스마스 요정': EN.mush, '???': CH.sol.F[0] }[name];
   if (!src) return;
   const h = Math.min(22, src.height), dx = R((22 - src.width) / 2);
   if (src.width === 32 && ['밤비', '솔', '솔 & 밤비', '???'].includes(name)) g.drawImage(src.hires || src, 12, 9, 72, 66, 0, 1, 22, 20);
@@ -892,7 +950,7 @@ async function encounter(i) {
   await wait(type === 'elf' ? 1000 : 1000);
   let px = e.x;
   if (type === 'elf') {
-    await say('꼬마 트리', '치… 파티 재밌게 놀아…');
+    await say('크리스마스 요정', '치… 파티 재밌게 놀아…');
     puff(e.x, GY - 11, 16); burstTwinkle(e.x, GY - 11, 14, 50, ['#ffd76a', '#5cff9a', '#ffffff']); ring(e.x, GY - 11, 2, 18, 0.35, ['#fff', '#b9b3ff']);
     px = e.x; e.alpha = 0; e.dizzy = false; await wait(500);
   }
@@ -933,6 +991,11 @@ async function lightUp(i) {
   burstTwinkle(player.x, GY - 18, 22, 45, ['#ffd76a', '#fff6ce', '#ef8a92']);
   for (const t of NEAR) {
     if (t.x > LIT_LIMIT[i]) continue;
+    if (Math.abs(t.x - player.x) < 95) {
+      const tx=t.x,ty=GY-t.pine.h*.65;
+      for(let k=0;k<3;k++)part({k:'conv',x:player.x,y:GY-18,x0:player.x,y0:GY-18,tx:tx+k*3-3,ty:ty-k*5,cx:12,cy:-18,life:1.1+k*.15,cols:['#fff0b1'],emit:true});
+      vlight(tx,ty,25,.65,2.3);
+    }
     t.bulbs.forEach((b, j) => { if (!b.on) { b.on = true; b.at = S.T + Math.abs(t.x - player.x) * 0.004 + j * 0.04; } });
   }
   for (let k = 0; k < 24 + i * 8; k++) part({ k: 'twinkle', x: S.cam + rand(0, LW), y: GY - rand(15, 95), vx: rand(-3, 3), vy: -rand(3, 9), life: rand(1.4, 2.4), cols: [pick(['#ffd76a', '#fff6ce', '#ee9bad'])], emit: true, delay: k * 0.04 });
@@ -1005,7 +1068,7 @@ function showCard() {
   if (CONFIG.rsvpUrl) $('#bRsvp').classList.remove('hide');
   const pc = $('#portrait'); pc.width = 360; pc.height = 150; const g = pc.getContext('2d'); g.setTransform(3, 0, 0, 3, 0, 0); g.imageSmoothingEnabled = false; g.clearRect(0, 0, pc.width, pc.height);
   const t = TREE_IMG['trees/pico_green'] ? treeFromImg(TREE_IMG['trees/pico_green']) : genTree({ type: 'pine', h: 30, w: 26, seed: 7, pal: TPAL[0], snowy: true });
-  g.drawImage(t.cv, 60 - t.ax, 47 - t.h + 2); g.drawImage(STAR, 55, 0);
+  if(BIG.tree.cv.hires) g.drawImage(BIG.tree.cv.hires,43,2,34,45); else g.drawImage(t.cv,60-t.ax,47-t.h+2); g.drawImage(STAR,55,0);
   g.fillStyle = '#c4e2f6'; g.fillRect(0, 47, 120, 3); g.fillStyle = '#ffffff'; g.fillRect(0, 47, 120, 1);
   [EN.fuzz, EN.slime, CH.sol.cheer, CH.player.cheer, CH.bambi.cheer, EN.mush].forEach((sp, i) => g.drawImage(sp.hires || sp, 10 + i * 20 - sp.width / 2, 48 - sp.height, sp.width, sp.height));
   const c = $('#card'); c.classList.remove('hide'); const pp = c.querySelector('.letter'); pp.classList.remove('pop'); void pp.offsetWidth; pp.classList.add('pop'); c.scrollTop = 0;
