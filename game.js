@@ -398,9 +398,9 @@ function doHit(a) {
   part({k:'seal',x:hx,y:hy,s:big?24:15,life:.55,cols:['#ffe2a1'],emit:true});
   if (enemy.hp > 0) {
     S.freeze = big ? 0.085 : 0.06; shake(big ? 3 : 2, big ? 0.18 : 0.12);
-    flareP(hx, hy, big ? 12 : 8, 0.16);
+    flareP(hx - 6, hy + 5, big ? 6 : 4, 0.12);
     ring(hx, hy, 2, big ? 22 : 15, 0.24, ['#ffffff', '#fff1a8', '#ffd25a', '#ff7a8a']);
-    burstSparks(hx, hy, big ? 18 : 12, big ? 150 : 120, { dir: -0.3, spread: 1.5 });
+    burstSparks(hx - 5, hy + 4, big ? 12 : 8, big ? 150 : 120, { dir: -0.3, spread: 1.5 });
     burstTwinkle(hx, hy, big ? 8 : 4, 40, ['#ffd76a', '#5cff9a', '#ff6b7a', '#ffffff']);
     debris(enemy.type, hx, hy, big ? 7 : 4);
     if (big) { confetti(hx, hy, 14, 90); ring(hx, hy, 4, 30, 0.34, ['#fff', '#5cff9a', '#2f9a5a'], 0.04); }
@@ -416,7 +416,7 @@ function finisher(hx, hy) {
   flareP(hx, hy, 24, 0.45);
   ring(hx, hy, 3, 34, 0.4, ['#ffffff', '#fff1a8', '#ffd25a', '#ff9a3a']);
   ring(hx, hy, 3, 50, 0.55, ['#ffffff', '#ff4a5a', '#d8303a'], 0.08);
-  ring(hx, hy, 3, 64, 0.7, ['#ffffff', '#5cff9a', '#2f9a5a'], 0.16);
+  ring(hx, hy, 3, 64, 0.7, ['#fff1cd', '#87c99c', '#317858'], 0.16);
   burstSparks(hx, hy, 34, 190, { g: 90, lm: 1.4 });
   burstTwinkle(hx, hy, 18, 70, ['#ffd76a', '#5cff9a', '#ff6b7a', '#ffffff', '#6ab8ff'], { lm: 1.6 });
   confetti(hx, hy, 28, 130); rays(hx, hy, 14, 70, 1.1); vlight(hx, hy, 110, 1.8, 1.2);
@@ -1057,14 +1057,14 @@ async function ending() {
   Object.assign(item, { fly: true, ft: 0, fd: 0.9, fx: item.x, fy: item.y, tx: TREE_X, ty: topY });
   await new Promise(r => { item.res = r; });
   item.visible = false; BIG.star = true;
-  flash(0.6, '#fff6d0'); shake(3, 0.3);
+  flash(0.3, '#fff6d0'); shake(3, 0.3);
   flareP(TREE_X, topY, 22, 0.5); ring(TREE_X, topY, 2, 40, 0.5, ['#fff', '#ffe08a', '#ffd25a']); burstSparks(TREE_X, topY, 24, 120, { g: 60 }); vlight(TREE_X, topY, 90, 1.5, 1);
   await wait(500);
   const bulbs = [...BIG.tree.bulbs].sort((a, b) => a.ly - b.ly), step = 0.045;
   bulbs.forEach((b, j) => { b.on = true; b.at = S.T + j * step; });
   for (let k = 0; k < 10; k++) setTimeout(() => { const b = bulbs[Math.floor(k / 10 * bulbs.length)]; vlight(TREE_X + b.lx, GY + 3 + b.ly, 30, 0.6, 0.4); }, k * bulbs.length * step * 100);
   await wait(bulbs.length * step * 1000 + 200);
-  BIG.lit = true; flash(0.8, '#fff8e0'); shake(4, 0.4);
+  BIG.lit = true; flash(0.36, '#fff2ce'); shake(4, 0.4);
   rays(TREE_X, topY, 16, 90, 3.2);
   ring(TREE_X, topY, 4, 60, 0.6, ['#fff', '#ffe08a', '#ffd25a']); ring(TREE_X, topY, 4, 90, 0.9, ['#fff', '#ff4a5a', '#d8303a'], 0.1); ring(TREE_X, topY, 4, 120, 1.1, ['#fff', '#5cff9a', '#2f9a5a'], 0.2);
   confetti(TREE_X, topY + 10, 40, 140); vlight(TREE_X, GY - 40, 140, 1.6, 2.2);
@@ -1090,7 +1090,7 @@ function spawnParty(instant) {
   GUESTS = [EN.fuzz, EN.slime, EN.mush].map((c, i) => ({ c, type: EV[i].type, x: TREE_X + [-48, -30, 48][i], at: instant ? 0 : S.T + 0.25 * i, seed: i * 2.1, shown: instant }));
 }
 function firework(x, y) {
-  const col = pick([['#ffffff', '#ff6b7a', '#e8344a'], ['#ffffff', '#5cff9a', '#2f9a5a'], ['#ffffff', '#ffe08a', '#f0a93a'], ['#ffffff', '#9ad1ff', '#6ab8ff']]);
+  const col = pick([['#fff2d3', '#de7686', '#ad354c'], ['#fff1cd', '#87c99c', '#317858'], ['#ffffff', '#ffe08a', '#f0a93a'], ['#ffffff', '#9ad1ff', '#6ab8ff']]);
   for (let i = 0; i < 40; i++) { const a = i / 40 * 6.283 + rand(-0.05, 0.05), v = rand(45, 62); part({ k: 'streak', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, g: 26, drag: 0.95, life: rand(1.0, 1.4), cols: [...col, col[2]], emit: true }); }
   burstTwinkle(x, y, 10, 30, [col[1], '#fff'], { lm: 1.5, g: 10 }); flareP(x, y, 8, 0.25); vlight(x, y, 50, 0.7, 0.6);
 }
