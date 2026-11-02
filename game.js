@@ -355,6 +355,10 @@ function flareAt(x, y, L, core, arm) {
   const d = R(L * 0.4); for (let i = 1; i <= d; i++) { ctx.fillRect(x + i, y + i, 1, 1); ctx.fillRect(x - i, y - i, 1, 1); ctx.fillRect(x + i, y - i, 1, 1); ctx.fillRect(x - i, y + i, 1, 1); }
   ctx.fillStyle = core || '#fff'; const c = Math.max(1, R(L * 0.6)); ctx.fillRect(x - c, y, c * 2 + 1, 1); ctx.fillRect(x, y - c, 1, c * 2 + 1); if (L > 5) ctx.fillRect(x - 1, y - 1, 3, 3);
 }
+function twinkleBeat(time, seed) {
+  const phase = (time + seed * .37) % 1.35;
+  return phase < .075 || (phase >= .18 && phase < .245);
+}
 function sparkle(x, y, c, big) {
   x = R(x); y = R(y); ctx.fillStyle = c; ctx.fillRect(x, y, 1, 1);
   if (big) { ctx.fillRect(x - 1, y, 3, 1); ctx.fillRect(x, y - 1, 1, 3); if (big > 1) { ctx.fillRect(x - 2, y, 1, 1); ctx.fillRect(x + 2, y, 1, 1); ctx.fillRect(x, y - 2, 1, 1); ctx.fillRect(x, y + 2, 1, 1); } }
@@ -740,7 +744,7 @@ function render() {
   if (enemy && enemy.alpha > 0) addL((player.x + enemy.x) / 2 - cam, GY - 12 + oy, 54, 0.55);
   const { noseX, noseY } = bp;
   if (bambi.visible) addL(noseX, noseY, 28, 0.75 + 0.15 * Math.sin(T * 5));
-  for (let i = 0; i < lit.length; i += 3) { const b = lit[i + 2]; addL(lit[i], lit[i + 1], BIG.lit ? 14 : 11, 0.42 * (0.8 + 0.2 * Math.sin(T * 3 + b.seed))); }
+  for (let i = 0; i < lit.length; i += 3) addL(lit[i], lit[i + 1], BIG.lit ? 14 : 11, .34);
   for (const v of VL) addL(v.x - cam, v.y + oy, v.r, v.i * (v.life / v.max));
   if (item && item.visible) addL(item.x - cam, item.y + oy, 28, 0.85);
   if (BIG.star) addL(starX, starY, BIG.lit ? 76 : 36, BIG.lit ? 1.1 : 0.8);
@@ -750,18 +754,23 @@ function render() {
   drawGlow(mx, my, 22, '#3a3a5e', 1);
   if (player.visible && S.mode !== 'custom') drawGlow(player.x - cam, GY - 12 + oy, 16, '#2a2212', 0.8);
   for (let i = 0; i < lit.length; i += 3) {
-    const b = lit[i + 2], tw = Math.sin(T * (2.1 + .55 * Math.sin(b.seed)) + b.seed), age = T - b.at;
-    const bx = lit[i], by = lit[i + 1];
-    drawGlow(bx, by, 8, b.col, .42 + .38 * tw);
-    ctx.fillStyle = b.col;
-    ctx.fillRect(bx, by, 1, 1);
-    if (tw > .78) sparkle(bx, by, b.col, tw > .97 ? 2 : 1);
-    if (tw > .94) pxl(bx, by, tw > .985 ? '#fffdf1' : '#ffe9b6');
-    if (age < .25) flareAt(bx, by, R(4 * (1 - age / .25)) + 1, '#fff9e6', b.col);
+    const bulb = lit[i + 2], bx = lit[i], by = lit[i + 1];
+    drawGlow(bx, by, 8, bulb.col, .42);
+    pxl(bx, by, bulb.col);
+    if (twinkleBeat(T, bulb.seed)) {
+      sparkle(bx, by, bulb.col, 2);
+      pxl(bx, by, '#fffdf1');
+    }
   }
   if (bambi.visible) { drawGlow(noseX, noseY, 5, '#ff3344', 0.85 + 0.15 * Math.sin(T * 5)); }
   if (item && item.visible) { const bob = item.fly ? 0 : R(Math.sin(item.t * 4) * 1.5); drawGlow(item.x - cam, item.y + oy + bob, 13, '#ffcf6a', 0.8); if ((item.t * 6 | 0) % 3 === 0) sparkle(item.x - cam + 6, item.y - 5 + oy + bob, '#fff', 1); }
-  if (BIG.star) { drawGlow(starX, starY, BIG.lit ? 24 : 13, '#ffcf6a', 0.9); if (BIG.lit) flareAt(starX, starY, 7 + R(Math.sin(T * 4) * 2), '#ffda72', '#efa936'); if (BIG.lit && Math.sin(T * 4) > .85) pxl(starX, starY, '#fffdf1'); }
+  if (BIG.star) {
+    drawGlow(starX, starY, BIG.lit ? 24 : 13, '#ffcf6a', .9);
+    if (BIG.lit && twinkleBeat(T, 0)) {
+      flareAt(starX, starY, 7, '#ffda72', '#efa936');
+      pxl(starX, starY, '#fffdf1');
+    }
+  }
   drawRays(cam, oy);
   for (const s of SLASH) drawSlash(s, cam, oy);
   drawParts(true, cam, oy);
