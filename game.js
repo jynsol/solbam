@@ -98,7 +98,7 @@ const TREE_IMG = {};
 function loadImgs() {
   const TT = ['bubble', 'large', 'pico', 'pine', 'slim', 'smallpine', 'spruce', 'thick', 'tiny', 'tri'], PP = ['cold', 'teal', 'gteal', 'green', 'night'];
   const trees = TT.flatMap(t => PP.map(p => 'trees/' + t + '_' + p));
-  return Promise.all([...trees, 'bunny', 'player', 'sol', 'bambi', 'en_fuzz', 'en_slime', 'en_mush'].map(n => new Promise(res => {
+  return Promise.all([...trees, 'bunny', 'player', 'sol', 'bambi', 'en_fuzz', 'en_slime', 'en_mush', 'monster-poses'].map(n => new Promise(res => {
     const im = new Image(); im.onload = () => { TREE_IMG[n] = im; res(); }; im.onerror = () => res(); im.src = 'img/' + (['player', 'sol', 'bambi'].includes(n) ? n + '-winter-v1' : n === 'en_mush' ? 'elf-christmas-v2' : n.startsWith('en_') ? n + '-christmas-v1' : n) + '.png';
   })));
 }
@@ -253,6 +253,17 @@ function setupSprites() {
     g.imageSmoothingEnabled = false; g.drawImage(TREE_IMG[asset], 0, 0, 24, 28);
     frame.hires = toCanvas(TREE_IMG[asset]); EN[key] = frame;
   }
+  if (TREE_IMG['monster-poses']) {
+    const frames = cells(TREE_IMG['monster-poses'], 6);
+    [EN.fuzz, EN.slime, EN.mush].forEach((base, i) => {
+      for (const [name, offset] of [['hit', 0], ['cheer', 3]]) {
+        const pose = mkCanvas(base.width, base.height);
+        pose.hires = frames[i + offset];
+        pose.getContext('2d').drawImage(pose.hires, 0, 0, pose.width, pose.height);
+        base[name] = pose;
+      }
+    });
+  }
   CH.bambi.noses = CH.bambi.F.map(noseAnchor);
 
 }
@@ -353,9 +364,9 @@ function puff(x, y, n) { for (let i = 0; i < n; i++) { const a = rand(0, 6.28), 
 
 /* ---------- 전투 ---------- */
 const ENEMY = {
-  ginger: { sp: () => EN.fuzz, hp: 4, name: '진저 쿠키', line: '바삭바삭~ 초대장은 내 거야!' },
-  snow:   { sp: () => EN.slime, hp: 5, name: '눈사람', line: '눈이 펑펑… 여긴 못 지나가~' },
-  elf:    { sp: () => EN.mush, hp: 6, name: '크리스마스 요정', line: '히히, 들켰다!\n그래도 초대장은 못 줘!' },
+  ginger: { sp: () => EN.fuzz, hp: 2, name: '진저 쿠키', line: '바삭바삭~ 초대장은 내 거야!' },
+  snow:   { sp: () => EN.slime, hp: 3, name: '눈사람', line: '눈이 펑펑… 여긴 못 지나가~' },
+  elf:    { sp: () => EN.mush, hp: 5, name: '크리스마스 요정', line: '히히, 들켰다!\n그래도 초대장은 못 줘!' },
 };
 function spawnEnemy(i) {
   const e = EV[i], d = ENEMY[e.type], sp = d.sp();
@@ -654,7 +665,7 @@ function render() {
     const phase = (T * pose.tempo + q.seed) % 1;
     const jump = phase < .68 ? Math.sin(Math.PI * phase / .68) : 0;
     const landing = phase >= .68 ? Math.sin(Math.PI * (phase - .68) / .32) : 0;
-    drawMonsterPose(q.c, q.x - cam, GY + 1 + oy - jump * pose.jump,
+    drawMonsterPose(jump > .25 && q.c.cheer ? q.c.cheer : q.c, q.x - cam, GY + 1 + oy - jump * pose.jump,
       Math.sin(phase * Math.PI * 2) * pose.tilt, landing * pose.squash - jump * .04);
 
   }
@@ -741,7 +752,8 @@ function drawEnemy(cam, oy) {
     const progress = 1 - e.recoil / .32;
     const kick = Math.sin(progress * Math.PI * 2) * (1 - progress);
     const pose = MONSTER_MOTION[e.type];
-    drawMonsterPose(e.flash > 0 ? whiteOf(e.sp) : e.sp, x + e.w / 2,
+    const hit = e.sp.hit || e.sp;
+    drawMonsterPose(e.flash > .075 ? whiteOf(hit) : hit, x + e.w / 2,
       y + e.h - Math.max(0, kick) * pose.jump, kick * (pose.tilt + .12),
       kick * pose.squash, e.alpha);
   }
