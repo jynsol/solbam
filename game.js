@@ -564,31 +564,37 @@ function decorateTree(tree, bulbs, x, oy, level, centerpiece) {
     if (Math.abs(a.ly - b.ly) > 5 || b.lx <= a.lx) continue;
     ctx.beginPath(); ctx.moveTo(x + a.lx, GY + 3 + a.ly + oy);
     ctx.quadraticCurveTo(x + (a.lx + b.lx) / 2, GY + 6 + Math.max(a.ly, b.ly) + oy, x + b.lx, GY + 3 + b.ly + oy); ctx.stroke();
+    ctx.fillStyle = '#f4d38a';
+    ctx.fillRect(R(x + (a.lx + b.lx) / 2), R(GY + 4.5 + (a.ly + b.ly) / 2 + oy), 1, 1);
   }
-  if (centerpiece && level >= 2) {
-    for(const fraction of [.3,.48,.66,.82]) {
-      const row=Math.floor((tree.h-2)*fraction), bounds=tree.rows[row];
-      if(!bounds || bounds[0]<0)continue;
-      const left=x+bounds[0]-tree.ax+3,right=x+bounds[1]-tree.ax-3,top=GY+3+row-tree.h+oy;
-      for(let j=0;j<24;j++){const u=j/23,bx=left+(right-left)*u,by=top+Math.sin(u*Math.PI)*5;ctx.fillStyle='#a83d51';ctx.fillRect(R(bx),R(by),2,2);ctx.fillStyle='#e6bd74';ctx.fillRect(R(bx),R(by+2),1,1);}
+  if (level >= 2) bulbs.forEach((bulb, index) => {
+    if (index % 2) return;
+    const bx = R(x + bulb.lx), by = GY + 7 + bulb.ly + oy;
+    const palette = ['#cc5064', '#83b9e2', '#cea3de', '#edbd64'];
+    ctx.fillStyle = '#c9a56a';
+    ctx.fillRect(bx, by - 3, 1, 2);
+    if (level >= 3 && index % 8 === 2) {
+      // Hooked peppermint cane, with alternating cream and berry bands.
+      ctx.fillStyle = '#8e394c';
+      ctx.fillRect(bx - 2, by - 1, 4, 2);
+      ctx.fillRect(bx - 3, by, 2, 2);
+      ctx.fillRect(bx, by, 2, 6);
+      ctx.fillStyle = '#fff1d5';
+      ctx.fillRect(bx - 2, by - 1, 2, 1);
+      ctx.fillRect(bx, by + 1, 2, 1);
+      ctx.fillRect(bx, by + 4, 2, 1);
+    } else if (level >= 3 && index % 8 === 6) {
+      starGem(bx, by + 1, 3.2, '#ffcd64', 0);
+      ctx.fillStyle = '#fff1ba'; ctx.fillRect(bx - 1, by, 1, 1);
+    } else {
+      ctx.fillStyle = '#655068';
+      ctx.fillRect(bx - 1, by - 1, 3, 5);
+      ctx.fillRect(bx - 2, by, 5, 3);
+      ctx.fillStyle = palette[Math.floor(index / 4) % palette.length];
+      ctx.fillRect(bx - 1, by, 3, 3);
+      ctx.fillStyle = '#fff6dc'; ctx.fillRect(bx - 1, by, 1, 1);
     }
-  }
-  if (level >= 2) bulbs.forEach((b, j) => {
-    if (j % 2) return;
-    const bx = R(x + b.lx), by = GY + 7 + b.ly + oy;
-    ctx.fillStyle = '#a58852'; ctx.fillRect(bx, by - 2, 1, 2);
-    ctx.fillStyle = ['#da5a6d', '#e5b85b', '#70b9aa'][j % 3];
-    ctx.fillRect(bx - 1, by, 3, 3); ctx.fillStyle = '#fff0c7'; ctx.fillRect(bx - 1, by, 1, 1);
   });
-  if (level >= 3) {
-    for (const fraction of [0.38, 0.65]) {
-      const by = GY - tree.h * fraction + oy, bx = R(x);
-      ctx.fillStyle = '#852f49'; ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bx - 5, by - 3); ctx.lineTo(bx - 5, by + 3); ctx.lineTo(bx, by); ctx.lineTo(bx + 5, by - 3); ctx.lineTo(bx + 5, by + 3); ctx.fill();
-      ctx.fillStyle = '#dc6574'; ctx.fillRect(bx - 1, by - 1, 2, 2);
-      line(bx - 1, by + 2, bx - 3, by + 7, '#bd4e63'); line(bx + 1, by + 2, bx + 3, by + 7, '#bd4e63');
-      starGem(bx, by + 10, 2, '#f5d386', 0);
-    }
-  }
   ctx.restore();
 }
 // Strings of warm lights and hanging stars transform the forest canopy.
@@ -705,10 +711,10 @@ function render() {
   drawGlow(mx, my, 22, '#3a3a5e', 1);
   if (player.visible && S.mode !== 'custom') drawGlow(player.x - cam, GY - 12 + oy, 16, '#2a2212', 0.8);
   for (let i = 0; i < lit.length; i += 3) {
-    const b = lit[i + 2], tw = Math.sin(T * 3 + b.seed), age = T - b.at;
+    const b = lit[i + 2], tw = Math.sin(T * (2.1 + .55 * Math.sin(b.seed)) + b.seed), age = T - b.at;
     ctx.fillStyle = b.col; ctx.fillRect(lit[i], lit[i + 1], 1, 1);
-    if (tw > 0.85) sparkle(lit[i], lit[i + 1], '#ffffff', 1);
-    drawGlow(lit[i], lit[i + 1], 6, b.col, 0.65 + 0.2 * tw);
+    if (tw > .91) sparkle(lit[i], lit[i + 1], '#fff6d1', tw > .985 ? 2 : 1);
+    drawGlow(lit[i], lit[i + 1], 7, b.col, 0.60 + 0.36 * tw);
     if (age < 0.25) flareAt(lit[i], lit[i + 1], R(5 * (1 - age / 0.25)) + 1, '#fff', b.col);
   }
   if (bambi.visible) { drawGlow(noseX, noseY, 5, '#ff3344', 0.85 + 0.15 * Math.sin(T * 5)); }
