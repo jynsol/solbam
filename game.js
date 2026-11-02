@@ -573,14 +573,26 @@ function decorateTree(tree, bulbs, x, oy, level, centerpiece, occupied) {
   if (!level || (!centerpiece && !bulbs.some(b => b.on && S.T >= b.at))) return;
   ctx.save();
   ctx.globalAlpha = 1;
-  ctx.strokeStyle = '#c4a35d'; ctx.lineWidth = 0.65;
-  for (let j = 1; j < bulbs.length; j++) {
-    const a = bulbs[j - 1], b = bulbs[j];
-    if (Math.abs(a.ly - b.ly) > 5 || b.lx <= a.lx) continue;
-    ctx.beginPath(); ctx.moveTo(x + a.lx, GY + 3 + a.ly + oy);
-    ctx.quadraticCurveTo(x + (a.lx + b.lx) / 2, GY + 6 + Math.max(a.ly, b.ly) + oy, x + b.lx, GY + 3 + b.ly + oy); ctx.stroke();
-    ctx.fillStyle = '#f4d38a';
-    ctx.fillRect(R(x + (a.lx + b.lx) / 2), R(GY + 4.5 + (a.ly + b.ly) / 2 + oy), 1, 1);
+  // Use branch-local spans so the pattern stays attached while the camera moves.
+  for (let j = 0; j + 1 < bulbs.length;) {
+    const start = bulbs[j];
+    const variant = Math.abs(start.lx * 7 + start.ly * 3 + tree.w) % 11;
+    let endIndex = j + 1;
+    while (endIndex < j + 1 + variant % 3 && endIndex + 1 < bulbs.length &&
+           bulbs[endIndex + 1].lx > bulbs[endIndex].lx &&
+           Math.abs(bulbs[endIndex + 1].ly - start.ly) <= 5) endIndex++;
+    const end = bulbs[endIndex];
+    j = endIndex;
+    const width = end.lx - start.lx;
+    if (width <= 0 || Math.abs(end.ly - start.ly) > 5 || variant === 0) continue;
+    const sag = Math.min(width * .32, 1.5 + variant * .38);
+    for (let step = 0; step <= width; step++) {
+      const u = step / width;
+      if (variant % 3 === 1 && u > .42 && u < .68) continue;
+      const by = start.ly + (end.ly - start.ly) * u + 4 * sag * u * (1-u);
+      ctx.fillStyle = (step + variant) % 4 === 0 ? '#edcb80' : '#a58b5c';
+      ctx.fillRect(R(x + start.lx + step), R(GY + 3 + by + oy), 1, 1);
+    }
   }
   if (level >= 2) bulbs.forEach((bulb, index) => {
     if (index % 2) return;
@@ -626,9 +638,10 @@ function drawForestCanopy(cam, oy, lit, occupied) {
     if (![a, b].every(t => t.bulbs.some(v => v.on && S.T >= v.at))) continue;
     const x0 = a.x - cam, x1 = b.x - cam;
     const y0 = GY - Math.min(72, a.pine.h * .72) + oy, y1 = GY - Math.min(72, b.pine.h * .72) + oy;
-    ctx.strokeStyle = '#7d8d66'; ctx.lineWidth = .75; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.quadraticCurveTo((x0+x1)/2, Math.max(y0,y1)+12, x1,y1); ctx.stroke();
+    const canopyControlY = Math.max(y0,y1) + 4 + (i * 7 % 15);
+    ctx.strokeStyle = '#7d8d66'; ctx.lineWidth = .75; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.quadraticCurveTo((x0+x1)/2, canopyControlY, x1,y1); ctx.stroke();
     for(let j=1;j<8;j++) {
-      const u=j/8, x=x0+(x1-x0)*u, y=(1-u)*(1-u)*y0+2*(1-u)*u*(Math.max(y0,y1)+12)+u*u*y1;
+      const u=j/8, x=x0+(x1-x0)*u, y=(1-u)*(1-u)*y0+2*(1-u)*u*(canopyControlY)+u*u*y1;
       const col=j%2?'#ffe2a1':'#f0a3a4';
       lit.push(R(x), R(y), {col, at: S.decorAt, seed:i+j});
       if(S.festival>=3 && j%2===0 && reserveOrnament(occupied,x-3,y,x+4,y+10)) {line(x,y,x,y+5,'#c0a471');starGem(x,y+7,2.2,'#f1cc79',0);}
@@ -1133,7 +1146,10 @@ function showCard() {
   if (CONFIG.rsvpUrl) $('#bRsvp').classList.remove('hide');
   const pc = $('#portrait'); pc.width = 360; pc.height = 150; const g = pc.getContext('2d'); g.setTransform(3, 0, 0, 3, 0, 0); g.imageSmoothingEnabled = false; g.clearRect(0, 0, pc.width, pc.height);
   const t = TREE_IMG['trees/pico_green'] ? treeFromImg(TREE_IMG['trees/pico_green']) : genTree({ type: 'pine', h: 30, w: 26, seed: 7, pal: TPAL[0], snowy: true });
-  if(BIG.tree.cv.hires) g.drawImage(BIG.tree.cv.hires,43,2,34,45); else g.drawImage(t.cv,60-t.ax,47-t.h+2); g.drawImage(STAR,55,0);
+  const starY = 2, tipY = starY + STAR.height;
+  const treeHeight = 48 - tipY, treeWidth = R(t.cv.width * treeHeight / t.cv.height);
+  g.drawImage(t.cv, 60 - R(treeWidth / 2), tipY, treeWidth, treeHeight);
+  g.drawImage(STAR, 60 - R(STAR.width / 2), starY);
   g.fillStyle = '#c4e2f6'; g.fillRect(0, 47, 120, 3); g.fillStyle = '#ffffff'; g.fillRect(0, 47, 120, 1);
   [EN.fuzz.cheer || EN.fuzz, EN.slime.cheer || EN.slime, CH.sol.cheer, CH.player.cheer, CH.bambi.cheer, EN.mush.cheer || EN.mush].forEach((sp, i) => g.drawImage(sp.hires || sp, 10 + i * 20 - sp.width / 2, 48 - sp.height, sp.width, sp.height));
   const c = $('#card'); c.classList.remove('hide'); const pp = c.querySelector('.letter'); pp.classList.remove('pop'); void pp.offsetWidth; pp.classList.add('pop'); c.scrollTop = 0;
