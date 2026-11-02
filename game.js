@@ -220,8 +220,7 @@ function buildWorldInner() {
   }
   PROPS = [];
   
-  BUN = [];
-  for (const x of [130, 330, 470, 600, 720, 880]) BUN.push({ x: x + irand(-20, 20), dir: Math.random() < 0.5 ? -1 : 1, hop: null, cool: rand(0, 2), f: 0, jy: 0 });
+  BUN = [{ x: 350, dir: -1, hop: null, cool: 0, f: 0, jy: 0 }];
   BIG.tree = makeBigTree();
 }
 function makeBigTree() {
@@ -476,13 +475,13 @@ function update(rdt) {
   for (const b of BUN) {
     if (b.hop) {
       b.hop.t += dt; const p = b.hop.t / 0.42;
-      if (p >= 1) { b.x = b.hop.x1; b.hop = null; b.jy = 0; b.f = 0; b.cool = rand(0.15, 0.5); for (let k = 0; k < 4; k++) part({ k: 'px', x: b.x + rand(-4, 4), y: GY, vx: rand(-14, 14), vy: rand(-16, -6), g: 60, life: 0.35, cols: ['#ffffff', '#c4e2f6'] }); }
+      if (p >= 1) { b.x = b.hop.x1; b.hop = null; b.jy = 0; b.f = 0; BUN = []; for (let k = 0; k < 4; k++) part({ k: 'px', x: b.x + rand(-4, 4), y: GY, vx: rand(-14, 14), vy: rand(-16, -6), g: 60, life: 0.35, cols: ['#ffffff', '#c4e2f6'] }); }
       else { b.x = b.hop.x0 + (b.hop.x1 - b.hop.x0) * p; b.jy = -Math.sin(p * Math.PI) * 7; b.f = p < 0.3 ? 1 : p < 0.85 ? 2 : 3; }
       continue;
     }
-    b.cool -= dt; const d = b.x - player.x;
-    if (b.cool <= 0 && player.visible && Math.abs(d) < 48) { b.dir = d >= 0 ? 1 : -1; b.hop = { t: 0, x0: b.x, x1: b.x + b.dir * 20 }; }
-    else if (b.cool <= 0 && Math.random() < dt * 0.12) { b.dir = Math.random() < 0.5 ? -1 : 1; b.hop = { t: 0, x0: b.x, x1: b.x + b.dir * 12 }; }
+    if (S.mode === 'walk' && player.visible && Math.abs(b.x - player.x) < 35) {
+      b.hop = { t: 0, x0: b.x, x1: b.x - 16 };
+    }
   }
   for (let i = P.length - 1; i >= 0; i--) {
     const p = P[i];
