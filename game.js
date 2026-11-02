@@ -766,6 +766,16 @@ function render() {
   if (item && item.visible) { const bob = item.fly ? 0 : R(Math.sin(item.t * 4) * 1.5); drawGlow(item.x - cam, item.y + oy + bob, 13, '#ffcf6a', 0.8); if ((item.t * 6 | 0) % 3 === 0) sparkle(item.x - cam + 6, item.y - 5 + oy + bob, '#fff', 1); }
   if (BIG.star) {
     drawGlow(starX, starY, BIG.lit ? 24 : 13, '#ffcf6a', .9);
+    if (BIG.lit) {
+      const phase = T % 1.35;
+      const age = phase >= .18 ? phase - .18 : phase;
+      // A short glint leads the softer amber spill. Only the light spreads.
+      if (age > .025 && age < .43) {
+        const progress = (age - .025) / .405;
+        const intensity = Math.min(1, progress * 6) * (1 - progress) ** 2;
+        drawGlow(starX, starY, 18 + R(16 * progress), '#ffa94e', .58 * intensity);
+      }
+    }
     if (BIG.lit && twinkleBeat(T, 0)) {
       flareAt(starX, starY, 7, '#ffda72', '#efa936');
       pxl(starX, starY, '#fffdf1');
