@@ -379,11 +379,11 @@ function startAttack() {
   player.atk = { t: 0, kind: player.combo, slash: false, hit: false, fin: enemy.hp === 1 };
 }
 function spawnSlash(kind, fin) {
-  const cx = player.x + 5, cy = GY - 9;
-  holidayBurst(cx + 8, cy - 4, fin ? 2 : 1);
+  const cx = player.x + 5, cy = GY - 17;
+
   if (fin) {
     SLASH.push({ x: cx + 3, y: cy - 2, r1: 6, r2: 22, a0: -2.1, a1: 1.2, t: 0, dur: 0.12, big: true });
-    SLASH.push({ x: cx + 3, y: cy - 2, r1: 6, r2: 22, a0: 2.0, a1: -1.3, t: -0.06, dur: 0.12, big: true });
+
   } else if (kind === 1) SLASH.push({ x: cx, y: cy, r1: 5, r2: 15, a0: 1.3, a1: -1.7, t: 0, dur: 0.1 });
   else if (kind === 2) SLASH.push({ x: cx, y: cy, r1: 5, r2: 18, a0: -2.4, a1: 1.1, t: 0, dur: 0.11, big: true });
   else SLASH.push({ x: cx, y: cy, r1: 5, r2: 15, a0: -1.9, a1: 1.0, t: 0, dur: 0.1 });
@@ -394,32 +394,28 @@ function doHit(a) {
   enemy.hp--; enemy.recoil = .32; enemy.flash = 0.1; enemy.kb = a.fin ? 7 : 3; enemy.hpShow = 9;
   enemy.broke.push({ i: enemy.hp, t: 0 });
   const big = a.kind === 2;
-  holidayBurst(hx, hy, big ? 2 : 1);
-  part({k:'seal',x:hx,y:hy,s:big?24:15,life:.55,cols:['#ffe2a1'],emit:true});
   if (enemy.hp > 0) {
-    S.freeze = big ? 0.085 : 0.06; shake(big ? 3 : 2, big ? 0.18 : 0.12);
-    flareP(hx - 6, hy + 5, big ? 6 : 4, 0.12);
-    ring(hx, hy, 2, big ? 22 : 15, 0.24, ['#ffffff', '#fff1a8', '#ffd25a', '#ff7a8a']);
-    burstSparks(hx - 5, hy + 4, big ? 12 : 8, big ? 150 : 120, { dir: -0.3, spread: 1.5 });
-    burstTwinkle(hx, hy, big ? 8 : 4, 40, ['#ffd76a', '#5cff9a', '#ff6b7a', '#ffffff']);
-    debris(enemy.type, hx, hy, big ? 7 : 4);
-    if (big) { confetti(hx, hy, 14, 90); ring(hx, hy, 4, 30, 0.34, ['#fff', '#5cff9a', '#2f9a5a'], 0.04); }
-    vlight(hx, hy, big ? 64 : 48, big ? 1.3 : 1.0, big ? 0.35 : 0.24);
+    S.freeze = big ? .055 : .035;
+    shake(1, .08);
+    const contactX = hx - 5, contactY = hy + 4;
+    flareP(contactX, contactY, big ? 4 : 3, .09);
+    for (let i = 0; i < (big ? 4 : 3); i++) {
+      part({ k: 'star', x: contactX, y: contactY, vx: -8 - i * 5,
+        vy: -22 + i * 11, life: .22 + i * .025, s: 1.5, rot: i, vr: 1,
+        cols: ['#f7d389'], emit: true });
+    }
+    vlight(contactX, contactY, 22, .45, .16);
   } else finisher(hx, hy);
 }
 function finisher(hx, hy) {
   S.mode = 'cutscene'; hideHint();
-  holidayBurst(hx,hy,3);
-  part({k:'seal',x:hx,y:hy,s:45,life:1.25,cols:['#ffe2a1'],emit:true});
-  S.freeze = 0.14; flash(0.28, '#fff1c9'); shake(3, 0.3);
-  S.ts = 0.28; tweens.push({ t: 0, d: 0.9, fn: p => S.ts = 0.28 + 0.72 * p, r: () => {}, ease: x => x * x });
-  flareP(hx, hy, 24, 0.45);
-  ring(hx, hy, 3, 34, 0.4, ['#ffffff', '#fff1a8', '#ffd25a', '#ff9a3a']);
-  ring(hx, hy, 3, 50, 0.55, ['#ffffff', '#ff4a5a', '#d8303a'], 0.08);
-  ring(hx, hy, 3, 64, 0.7, ['#fff1cd', '#87c99c', '#317858'], 0.16);
-  burstSparks(hx, hy, 34, 190, { g: 90, lm: 1.4 });
-  burstTwinkle(hx, hy, 18, 70, ['#ffd76a', '#5cff9a', '#ff6b7a', '#ffffff', '#6ab8ff'], { lm: 1.6 });
-  confetti(hx, hy, 28, 130); rays(hx, hy, 14, 70, 1.1); vlight(hx, hy, 110, 1.8, 1.2);
+  S.freeze = .09;
+  shake(2, .17);
+  S.ts = .55;
+  tween(.45, p => { S.ts = .55 + .45 * p; });
+  flareP(hx - 5, hy + 3, 5, .14);
+  burstTwinkle(hx - 5, hy + 3, 6, 26, ['#f4d48d', '#fff0ce']);
+  vlight(hx, hy, 32, .65, .32);
   enemy.state = 'dying'; enemy.dieAt = 0;
 }
 function dissolve(mode) {
@@ -749,7 +745,7 @@ function drawEnemy(cam, oy) {
     const kick = Math.sin(progress * Math.PI * 2) * (1 - progress);
     const pose = MONSTER_MOTION[e.type];
     const hit = e.sp.hit || e.sp;
-    drawMonsterPose(e.flash > .075 ? whiteOf(hit) : hit, x + e.w / 2,
+    drawMonsterPose(hit, x + e.w / 2,
       y + e.h - Math.max(0, kick) * pose.jump, kick * (pose.tilt + .12),
       kick * pose.squash, e.alpha);
   }
@@ -789,12 +785,9 @@ function drawSlash(s, cam, oy) {
     for(let j=0;j<=32;j++){const u=j/32,a=tail+(head-tail)*u;const r=outer;const px=x+Math.cos(a)*r,py=y+Math.sin(a)*r;j?ctx.lineTo(px,py):ctx.moveTo(px,py);}
     for(let j=32;j>=0;j--){const u=j/32,a=tail+(head-tail)*u,r=outer-width*Math.sin(u*Math.PI*.85);ctx.lineTo(x+Math.cos(a)*r,y+Math.sin(a)*r);}ctx.closePath();ctx.fill();
   };
-  ribbon(s.r2+1,s.big?7:5,'#efba59');
-  ribbon(s.r2,s.big?5.4:3.6,'#fff7d9');
-  ribbon(s.r2-3,s.big?2.2:1.5,'#ce5269');
-  ctx.strokeStyle='#a7e0da';ctx.lineWidth=.6;ctx.beginPath();
-  for(let j=0;j<=24;j++){const a=tail+(head-tail)*j/24,px=x+Math.cos(a)*(s.r2+3),py=y+Math.sin(a)*(s.r2+3);j?ctx.lineTo(px,py):ctx.moveTo(px,py);}ctx.stroke();
-  for(let j=0;j<4;j++){const a=tail+(head-tail)*j/3,r=s.r2+3;starGem(x+Math.cos(a)*r,y+Math.sin(a)*r,1+j*.5,'#ffe2a1',a);}
+  ribbon(s.r2+1,s.big?3.8:2.8,'#efba59');
+  ribbon(s.r2,s.big?2.5:1.8,'#fff7d9');
+  ribbon(s.r2-1.4,s.big?1.3:.85,'#ce5269');
   ctx.restore();
   if(p<1){const hx=x+Math.cos(head)*(s.r2-1),hy=y+Math.sin(head)*(s.r2-1);drawGlow(hx,hy,7,'#ffe1a0',.65);starGem(hx,hy,2.5,'#fff8df',head);}
 }
