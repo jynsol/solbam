@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>Sol &amp; Bambi's Holiday Party</title>
 <meta name="theme-color" content="#11141f">
 <meta name="description" content="솔과 밤비가 여는 포트럭 크리스마스 파티, 솔밤배 초대장">
@@ -73,15 +73,15 @@ img.px,canvas.px{image-rendering:pixelated}
 .btns .btn{flex:1}.btns .btn.b2{flex:0 0 96px}
 
 /* ---------- 대사창 ---------- */
-#dlg{position:absolute;left:12px;right:12px;bottom:16px;height:112px;padding:16px 14px 14px 92px;pointer-events:none;overflow:hidden}
+#dlg{position:absolute;left:12px;right:12px;bottom:16px;min-height:100px;padding:13px 18px 22px 80px;pointer-events:none}
 #dlg.in{animation:none}
 @keyframes dIn{from{transform:translateY(16px);opacity:0}}
-.pic{position:absolute;left:14px;top:14px;width:66px;height:66px;background:var(--sky);
+.pic{position:absolute;left:14px;top:14px;width:54px;height:54px;background:var(--sky);
   box-shadow:0 0 0 var(--p) var(--ink),inset 0 calc(-3*var(--p)) 0 0 #9cc6e6}
-.pic canvas{width:66px;height:66px;image-rendering:pixelated;display:block}
+.pic canvas{width:100%;height:100%;image-rendering:pixelated;display:block}
 .tag{display:inline-block;font-size:13px;padding:3px 8px;margin-bottom:6px;color:#fff;background:#3a4468;box-shadow:0 0 0 2px var(--ink)}
 .tag.red{background:var(--red)}.tag.gold{background:var(--gold2)}.tag.blue{background:#4a63c4}
-#dlgText{font-size:15px;line-height:1.7;color:#fff;white-space:pre-wrap;word-break:keep-all;min-height:50px}
+#dlgText{overflow-wrap:anywhere;font-size:15px;line-height:1.5;color:#fff;white-space:pre-wrap;word-break:keep-all;min-height:50px}
 #dlgNext{position:absolute;right:14px;bottom:12px;width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-top:8px solid var(--gold);animation:bob .5s steps(2) infinite}
 @keyframes bob{50%{transform:translateY(3px)}}
 #hint{position:absolute;left:50%;bottom:34px;transform:translateX(-50%);font-size:14px;padding:11px 16px;white-space:nowrap;pointer-events:none}
@@ -138,6 +138,15 @@ img.px,canvas.px{image-rendering:pixelated}
   text-shadow:0 3px 0 var(--red),0 6px 0 var(--red2),0 9px 0 var(--ink),3px 3px 0 var(--red2),-3px 3px 0 var(--ink)}
 .m2{display:inline-block;margin-top:18px;font-size:12px;padding:8px 12px}
 noscript{position:absolute;inset:0;padding:24px;color:#fff;line-height:1.8}
+#dlgText{display:grid}
+#dlgText::before,#dlgLine{grid-area:1/1}
+#dlgText::before{content:attr(data-full);visibility:hidden}
+body{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);height:100dvh}
+#app{height:100%;max-width:100%;container-type:inline-size}
+@media(orientation:portrait) and (max-width:600px){#app{width:min(100%,58dvh)}}
+.logo{font-size:clamp(24px,13cqw,52px)}
+@media(max-height:520px){#app{width:min(100%,62dvh)}#dlg{padding:8px 12px 14px 48px;min-height:64px;bottom:6px}.pic{width:32px;height:32px;left:8px;top:8px}#dlgText{font-size:12px;min-height:0}.tag{font-size:11px;margin-bottom:3px}.tap{bottom:16%;padding:6px}.t-sub{margin-top:8px}}
+#piece{overflow-y:auto;touch-action:pan-y}#piece .letter{margin:auto}
 </style>
 </head>
 <body>
@@ -162,7 +171,7 @@ noscript{position:absolute;inset:0;padding:24px;color:#fff;line-height:1.8}
   <div id="dlg" class="box hide">
     <div class="pic"><canvas id="dlgPic" width="22" height="22"></canvas></div>
     <div id="dlgName" class="tag"></div>
-    <div id="dlgText"></div>
+    <div id="dlgText"><span id="dlgLine"></span></div>
     <div id="dlgNext"></div>
   </div>
   <div id="hint" class="box hide"></div>
@@ -215,3 +224,4 @@ const CONFIG = { secret: 'WVK5lhbFjG/uxlGGYGNaeI0gkwhWiASOEnZj6AI4griDXwC+gLGcb2
 <script src="game.js"></script>
 </body>
 </html>
+

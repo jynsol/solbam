@@ -23,7 +23,7 @@ const LIT_LIMIT = [EV[1].x + 30, EV[2].x + 30, TREE_X - 50];
 function resize() {
   const r = app.getBoundingClientRect();
   LH = clamp(R(LW * r.height / r.width), 180, 300);
-  cv.width = LW * RENDER_SCALE; cv.height = LH * RENDER_SCALE; ctx.setTransform(RENDER_SCALE, 0, 0, RENDER_SCALE, 0, 0); GY = R(LH * 0.64);
+  cv.width = LW * RENDER_SCALE; cv.height = LH * RENDER_SCALE; ctx.setTransform(RENDER_SCALE, 0, 0, RENDER_SCALE, 0, 0); GY = Math.max(148, R(LH * 0.64));
   darkCv.width = LW; darkCv.height = LH; darkImg = darkCtx.createImageData(LW, LH);
   for (let i = 0; i < LW * LH; i++) { darkImg.data[i * 4] = 9; darkImg.data[i * 4 + 1] = 11; darkImg.data[i * 4 + 2] = 24; }
   lightBuf = new Float32Array(LW * LH);
@@ -797,7 +797,7 @@ function drawParts(emit, cam, oy) {
 }
 
 /* ---------- 대사 / 입력 ---------- */
-const dlg = $('#dlg'), dlgN = $('#dlgName'), dlgT = $('#dlgText'), dlgX = $('#dlgNext'), dlgP = $('#dlgPic');
+const dlg = $('#dlg'), dlgN = $('#dlgName'), dlgT = $('#dlgLine'), dlgX = $('#dlgNext'), dlgP = $('#dlgPic');
 let dlgState = null;
 function portrait(name) {
   dlgP.width = dlgP.height = 66; const g = dlgP.getContext('2d'); g.setTransform(3, 0, 0, 3, 0, 0); g.clearRect(0, 0, 22, 22); g.imageSmoothingEnabled = false;
@@ -812,7 +812,7 @@ function portrait(name) {
 function say(name, text) {
   return new Promise(res => {
     dlg.classList.remove('hide'); dlgN.textContent = name; dlgN.className = 'tag ' + ({ '밤비': 'red', '솔': 'gold', '???': 'gold', '솔 & 밤비': 'gold' }[name] || 'blue');
-    portrait(name); dlgT.textContent = ''; dlgX.style.visibility = 'hidden';
+    portrait(name); $('#dlgText').dataset.full = text; dlgT.textContent = ''; dlgX.style.visibility = 'hidden';
     dlg.classList.remove('in'); void dlg.offsetWidth; dlg.classList.add('in');
     const st = { text, i: 0, done: false, res, tm: null }; dlgState = st;
     const tick = () => { st.i++; dlgT.textContent = text.slice(0, st.i); if (st.i >= text.length) { st.done = true; dlgX.style.visibility = 'visible'; } else st.tm = setTimeout(tick, 30); };
