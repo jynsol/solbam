@@ -364,8 +364,8 @@ function puff(x, y, n) { for (let i = 0; i < n; i++) { const a = rand(0, 6.28), 
 
 /* ---------- 전투 ---------- */
 const ENEMY = {
-  ginger: { sp: () => EN.fuzz, hp: 2, name: '진저 쿠키', line: '바삭바삭~ 초대장은 내 거야!' },
-  snow:   { sp: () => EN.slime, hp: 3, name: '눈사람', line: '눈이 펑펑… 여긴 못 지나가~' },
+  ginger: { sp: () => EN.fuzz, hp: 3, name: '진저 쿠키', line: '바삭바삭~ 초대장은 내 거야!' },
+  snow:   { sp: () => EN.slime, hp: 4, name: '눈사람', line: '눈이 펑펑… 여긴 못 지나가~' },
   elf:    { sp: () => EN.mush, hp: 5, name: '크리스마스 요정', line: '히히, 들켰다!\n그래도 초대장은 못 줘!' },
 };
 function spawnEnemy(i) {
@@ -661,12 +661,8 @@ function render() {
   for (const q of GUESTS) {
     if (S.T < q.at) continue;
     if (!q.shown) { q.shown = true; puff(q.x, GY - 6, 6); burstTwinkle(q.x, GY - 10, 6, 30, ['#ffd76a', '#fff']); }
-    const pose = MONSTER_MOTION[q.type];
-    const phase = (T * pose.tempo + q.seed) % 1;
-    const jump = phase < .68 ? Math.sin(Math.PI * phase / .68) : 0;
-    const landing = phase >= .68 ? Math.sin(Math.PI * (phase - .68) / .32) : 0;
-    drawMonsterPose(jump > .25 && q.c.cheer ? q.c.cheer : q.c, q.x - cam, GY + 1 + oy - jump * pose.jump,
-      Math.sin(phase * Math.PI * 2) * pose.tilt, landing * pose.squash - jump * .04);
+    const sprite = q.c.cheer || q.c;
+    drawSp(sprite, q.x - cam - sprite.width / 2, GY + 1 + oy - sprite.height);
 
   }
   drawParts(false, cam, oy);
