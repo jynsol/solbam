@@ -381,7 +381,7 @@ function spawnSlash(kind, fin) {
 function hitPoint() { return { x: enemy.x - enemy.w * 0.2, y: GY - enemy.h * 0.55 + enemy.oy }; }
 function doHit(a) {
   const { x: hx, y: hy } = hitPoint();
-  enemy.hp--; enemy.flash = 0.1; enemy.kb = a.fin ? 7 : 3; enemy.hpShow = 9;
+  enemy.hp--; enemy.recoil = .32; enemy.flash = 0.1; enemy.kb = a.fin ? 7 : 3; enemy.hpShow = 9;
   enemy.broke.push({ i: enemy.hp, t: 0 });
   const big = a.kind === 2;
   holidayBurst(hx, hy, big ? 2 : 1);
@@ -451,7 +451,7 @@ function update(rdt) {
 
   if (enemy) {
     const e = enemy;
-    e.t += dt; e.flash = Math.max(0, e.flash - dt); e.kb *= Math.pow(0.002, dt); e.hpShow = Math.max(0, e.hpShow - dt);
+    e.t += dt; e.recoil = Math.max(0, (e.recoil || 0) - dt); e.flash = Math.max(0, e.flash - dt); e.kb *= Math.pow(0.002, dt); e.hpShow = Math.max(0, e.hpShow - dt);
     for (const b of e.broke) b.t += dt; e.broke = e.broke.filter(b => b.t < 0.5);
     if (e.state === 'dying') {
       e.dieAt += dt;
@@ -651,8 +651,13 @@ function render() {
   for (const q of GUESTS) {
     if (S.T < q.at) continue;
     if (!q.shown) { q.shown = true; puff(q.x, GY - 6, 6); burstTwinkle(q.x, GY - 10, 6, 30, ['#ffd76a', '#fff']); }
-    const hop = Math.max(0, Math.sin(S.T * 4 + q.seed)) * 2;
-    drawSp(q.c, q.x - q.c.width / 2 - cam, GY - q.c.height + 1 + oy - R(hop));
+    const pose = MONSTER_MOTION[q.type];
+    const phase = (T * pose.tempo + q.seed) % 1;
+    const jump = phase < .68 ? Math.sin(Math.PI * phase / .68) : 0;
+    const landing = phase >= .68 ? Math.sin(Math.PI * (phase - .68) / .32) : 0;
+    drawMonsterPose(q.c, q.x - cam, GY + 1 + oy - jump * pose.jump,
+      Math.sin(phase * Math.PI * 2) * pose.tilt, landing * pose.squash - jump * .04);
+
   }
   drawParts(false, cam, oy);
   if (sol.visible) { const sp = sol.cheer && (T * 4 | 0) % 2 ? CH.sol.cheer : CH.sol.F[(T * 2 | 0) % 4]; drawSp(sp, sol.x - sp.width / 2 - cam, feetY(sp) + oy - ((T * 1.5 | 0) % 2)); }
@@ -715,11 +720,32 @@ function drawPlayer(cam, oy) {
   if (a && a.t >= 0.045 && a.t < 0.17) cane(x, y, [[24, 23], [25, 23], [26, 23], [27, 23], [28, 23], [29, 23], [30, 22], [31, 22], [32, 23], [32, 24]]);
 }
 function cane(x, y, pts) { pts.forEach(([px, py], i) => { ctx.fillStyle = (i >> 1) % 2 ? '#e8344a' : '#ffffff'; ctx.fillRect(R(x + px), R(y + py), 1, 1); }); }
+const MONSTER_MOTION = {
+  ginger: { tempo: 1.55, jump: 4, tilt: .16, squash: .09 },
+  snow: { tempo: 1.15, jump: 3, tilt: .045, squash: .18 },
+  elf: { tempo: 1.8, jump: 5, tilt: .1, squash: .07 }
+};
+function drawMonsterPose(sprite, center, feet, tilt, squash, alpha) {
+  ctx.save();
+  ctx.translate(R(center), R(feet));
+  ctx.rotate(tilt);
+  ctx.scale(1 + squash, 1 - squash);
+  drawSp(sprite, -sprite.width / 2, -sprite.height, false, alpha);
+  ctx.restore();
+}
 function drawEnemy(cam, oy) {
   const e = enemy; let bob = 0, sx = 0;
   if (e.state === 'idle' || e.state === 'battle') { if (e.type === 'ginger') bob = -R(Math.abs(Math.sin(e.t * 7)) * 3); else if (e.type === 'snow') sx = R(Math.sin(e.t * 2.2)); else bob = -R(Math.abs(Math.sin(e.t * 5)) * 2); }
   const x = e.x - e.w / 2 - cam + e.kb + sx, y = GY - e.h + 1 + oy + bob + e.oy;
   if (e.clip > 0) { ctx.save(); ctx.beginPath(); ctx.rect(x - 6, 0, e.w + 12, GY + 1 + oy); ctx.clip(); drawSp(e.sp, x, y + e.clip); ctx.restore(); }
+  else if (e.recoil > 0) {
+    const progress = 1 - e.recoil / .32;
+    const kick = Math.sin(progress * Math.PI * 2) * (1 - progress);
+    const pose = MONSTER_MOTION[e.type];
+    drawMonsterPose(e.flash > 0 ? whiteOf(e.sp) : e.sp, x + e.w / 2,
+      y + e.h - Math.max(0, kick) * pose.jump, kick * (pose.tilt + .12),
+      kick * pose.squash, e.alpha);
+  }
   else drawSp(e.flash > 0 ? whiteOf(e.sp) : e.sp, x, y, false, e.alpha < 1 ? e.alpha : null);
 
   if (e.dizzy) for (let i = 0; i < 3; i++) { const an = S.T * 5 + i * 2.09; sparkle(x + 12 + Math.cos(an) * 9, y + 8 + Math.sin(an) * 2, '#ffd25e', 1); }
@@ -1050,7 +1076,7 @@ function spawnParty(instant) {
   Object.assign(sol, { x: TREE_X - 10, visible: true, cheer: true });
   Object.assign(player, { x: TREE_X + 10, visible: true, moving: false, atk: null, lunge: 0, cheer: true });
   Object.assign(bambi, { x: TREE_X + 30, visible: true, moving: false, guide: false, oy: 0, cheer: true });
-  GUESTS = [EN.fuzz, EN.slime, EN.mush].map((c, i) => ({ c, x: TREE_X + [-48, -30, 48][i], at: instant ? 0 : S.T + 0.25 * i, seed: i * 2.1, shown: instant }));
+  GUESTS = [EN.fuzz, EN.slime, EN.mush].map((c, i) => ({ c, type: EV[i].type, x: TREE_X + [-48, -30, 48][i], at: instant ? 0 : S.T + 0.25 * i, seed: i * 2.1, shown: instant }));
 }
 function firework(x, y) {
   const col = pick([['#ffffff', '#ff6b7a', '#e8344a'], ['#ffffff', '#5cff9a', '#2f9a5a'], ['#ffffff', '#ffe08a', '#f0a93a'], ['#ffffff', '#9ad1ff', '#6ab8ff']]);
