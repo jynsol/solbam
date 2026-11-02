@@ -98,8 +98,8 @@ const TREE_IMG = {};
 function loadImgs() {
   const TT = ['bubble', 'large', 'pico', 'pine', 'slim', 'smallpine', 'spruce', 'thick', 'tiny', 'tri'], PP = ['cold', 'teal', 'gteal', 'green', 'night'];
   const trees = TT.flatMap(t => PP.map(p => 'trees/' + t + '_' + p));
-  return Promise.all([...trees, 'bunny', 'player', 'sol', 'bambi', 'en_fuzz', 'en_slime', 'en_mush', 'guests'].map(n => new Promise(res => {
-    const im = new Image(); im.onload = () => { TREE_IMG[n] = im; res(); }; im.onerror = () => res(); im.src = 'img/' + (['player', 'sol', 'bambi'].includes(n) ? n + '-winter-v1' : n) + '.png';
+  return Promise.all([...trees, 'bunny', 'player', 'sol', 'bambi', 'en_fuzz', 'en_slime', 'en_mush'].map(n => new Promise(res => {
+    const im = new Image(); im.onload = () => { TREE_IMG[n] = im; res(); }; im.onerror = () => res(); im.src = 'img/' + (['player', 'sol', 'bambi'].includes(n) ? n + '-winter-v1' : n.startsWith('en_') ? n + '-christmas-v1' : n) + '.png';
   })));
 }
 // 그림에서 잘라낸 나무 → 색 변형/좌우 반전 + 전구 자리 계산
@@ -237,7 +237,7 @@ function makeBigTree() {
 
 /* ---------- 상태 ---------- */
 const CH = {}, EN = {};
-let GUESTF = [], GUESTS = [];
+let GUESTS = [];
 function cells(img, n) { const w = img.width / n, out = []; for (let i = 0; i < n; i++) { const c = mkCanvas(w, img.height); c.getContext('2d').drawImage(img, i * w, 0, w, img.height, 0, 0, w, img.height); out.push(c); } return out; }
 function toCanvas(img) { const c = mkCanvas(img.width, img.height); c.getContext('2d').drawImage(img, 0, 0); return c; }
 function setupSprites() {
@@ -249,9 +249,13 @@ function setupSprites() {
     });
     CH[k] = { F, front: F[0], idle: F[0], walkA: F[4], walkB: F[6], wind: F[k === 'player' ? 8 : 6], swing: F[k === 'player' ? 9 : 7], cheer: F[11] };
   }
-  EN.fuzz = toCanvas(TREE_IMG.en_fuzz); EN.slime = toCanvas(TREE_IMG.en_slime); EN.mush = toCanvas(TREE_IMG.en_mush);
+  for (const [key, asset] of [['fuzz', 'en_fuzz'], ['slime', 'en_slime'], ['mush', 'en_mush']]) {
+    const frame = mkCanvas(24, 28), g = frame.getContext('2d');
+    g.imageSmoothingEnabled = false; g.drawImage(TREE_IMG[asset], 0, 0, 24, 28);
+    frame.hires = toCanvas(TREE_IMG[asset]); EN[key] = frame;
+  }
   CH.bambi.noses = CH.bambi.F.map(noseAnchor);
-  GUESTF = cells(TREE_IMG.guests, 8);
+
 }
 // The nose is the highest red cluster, above the scarf, in each frame.
 function noseAnchor(frame) {
@@ -350,9 +354,9 @@ function puff(x, y, n) { for (let i = 0; i < n; i++) { const a = rand(0, 6.28), 
 
 /* ---------- 전투 ---------- */
 const ENEMY = {
-  ginger: { sp: () => EN.fuzz, hp: 4, name: '털뭉치', line: '보들보들~ 이건 내 거야!' },
-  snow:   { sp: () => EN.slime, hp: 5, name: '말랑 슬라임', line: '말랑말랑… 여긴 못 지나가~' },
-  elf:    { sp: () => EN.mush, hp: 6, name: '장난꾸러기 버섯', line: '히히, 들켰다!\n그래도 초대장은 못 줘!' },
+  ginger: { sp: () => EN.fuzz, hp: 4, name: '진저 쿠키', line: '바삭바삭~ 초대장은 내 거야!' },
+  snow:   { sp: () => EN.slime, hp: 5, name: '눈송이', line: '눈이 펑펑… 여긴 못 지나가~' },
+  elf:    { sp: () => EN.mush, hp: 6, name: '꼬마 트리', line: '히히, 들켰다!\n그래도 초대장은 못 줘!' },
 };
 function spawnEnemy(i) {
   const e = EV[i], d = ENEMY[e.type], sp = d.sp();
@@ -546,7 +550,7 @@ function decorateTree(tree, bulbs, x, oy, level, centerpiece) {
   ctx.restore();
 }
 const whiteCache = new Map();
-function whiteOf(img) { if (whiteCache.has(img)) return whiteCache.get(img); const c = mkCanvas(img.width, img.height), g = c.getContext('2d'); g.drawImage(img, 0, 0); g.globalCompositeOperation = 'source-in'; g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); whiteCache.set(img, c); return c; }
+function whiteOf(img) { if (whiteCache.has(img)) return whiteCache.get(img); const c = mkCanvas(img.width, img.height), g = c.getContext('2d'); g.drawImage(img, 0, 0); g.globalCompositeOperation = 'source-in'; g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); if (img.hires) { c.hires = mkCanvas(img.hires.width, img.hires.height); const h = c.hires.getContext('2d'); h.drawImage(img.hires, 0, 0); h.globalCompositeOperation = 'source-in'; h.fillStyle = '#fff'; h.fillRect(0, 0, c.hires.width, c.hires.height); } whiteCache.set(img, c); return c; }
 const LIGHTS = [];
 function addL(x, y, r, i) { if (x + r < 0 || x - r > LW || y + r < 0 || y - r > LH) return; LIGHTS.push(x, y, r, i); }
 function computeDark() {
@@ -598,7 +602,7 @@ function render() {
   ctx.fillStyle = '#86a8d0'; for (const f of FOOT) { const xx = R(f.x - cam); if (xx > -2 && xx < LW + 2) ctx.fillRect(xx - 3 + f.alt * 3, GY + 2 + f.alt + oy, 2, 1); }
   for (const p of PROPS) { const im = TREE_IMG[p.n], xx = p.x - cam; if (!im || xx < -30 || xx > LW + 30) continue; drawSp(im, xx - im.width / 2, GY - im.height + 2 + p.dy + oy, p.flip); }
   const BI = TREE_IMG.bunny;
-  if (BI) { const cw = BI.width / 4; for (const b of BUN) {
+  if (BI && !S.party) { const cw = BI.width / 4; for (const b of BUN) {
     const xx = R(b.x - cam - cw / 2); if (xx < -20 || xx > LW + 20) continue;
     const y = R(GY - BI.height + 1 + oy + b.jy + [0, -5, -3, 0][b.f]);
     ctx.save(); if (b.dir < 0) { ctx.translate(xx + cw, y); ctx.scale(-1, 1); ctx.drawImage(BI, b.f * cw, 0, cw, BI.height, 0, 0, cw, BI.height); } else ctx.drawImage(BI, b.f * cw, 0, cw, BI.height, xx, y, cw, BI.height); ctx.restore();
@@ -739,10 +743,11 @@ const dlg = $('#dlg'), dlgN = $('#dlgName'), dlgT = $('#dlgText'), dlgX = $('#dl
 let dlgState = null;
 function portrait(name) {
   dlgP.width = dlgP.height = 66; const g = dlgP.getContext('2d'); g.setTransform(3, 0, 0, 3, 0, 0); g.clearRect(0, 0, 22, 22); g.imageSmoothingEnabled = false;
-  const src = { '밤비': CH.bambi.F[0], '솔': CH.sol.F[0], '솔 & 밤비': CH.sol.cheer, '털뭉치': EN.fuzz, '말랑 슬라임': EN.slime, '장난꾸러기 버섯': EN.mush, '???': CH.sol.F[0] }[name];
+  const src = { '밤비': CH.bambi.F[0], '솔': CH.sol.F[0], '솔 & 밤비': CH.sol.cheer, '진저 쿠키': EN.fuzz, '눈송이': EN.slime, '꼬마 트리': EN.mush, '???': CH.sol.F[0] }[name];
   if (!src) return;
   const h = Math.min(22, src.height), dx = R((22 - src.width) / 2);
   if (src.width === 32 && ['밤비', '솔', '솔 & 밤비', '???'].includes(name)) g.drawImage(src.hires || src, 12, 9, 72, 66, 0, 1, 22, 20);
+  else if (src.hires) g.drawImage(src.hires, 0, 0, src.hires.width, src.hires.height, 1, 0, 20, 22);
   else g.drawImage(src, 0, 0, src.width, h, dx, R((22 - h) / 2) + 1, src.width, h);
   if (name === '???') { g.globalCompositeOperation = 'source-in'; g.fillStyle = '#3c4566'; g.fillRect(0, 0, 22, 22); g.globalCompositeOperation = 'source-over'; }
 }
@@ -797,14 +802,16 @@ function loadSaved() {
 }
 const saveLook = () => { try { localStorage.setItem('solbam_look', JSON.stringify(look)); } catch (e) {} };
 function setScene(kind) {
+  S.party = kind === 'title';
   S.festival = kind === 'title' ? 3 : 0; S.decorAt = -10;
   if (kind === 'title') {
     S.camLock = TREE_X - LW / 2; S.cam = S.camLock; S.amb = 0.3; BIG.lit = true; BIG.star = true;
     BIG.tree.bulbs.forEach(b => { b.on = true; b.at = 0; }); NEAR.forEach(t => t.bulbs.forEach(b => { b.on = true; b.at = 0; }));
-    sol.visible = true; bambi.visible = true; bambi.x = TREE_X + 30; player.visible = false; spawnGuests(true);
+    spawnParty(true);
   } else {
     S.camLock = null; BIG.lit = false; BIG.star = false; GUESTS = [];
     BIG.tree.bulbs.forEach(b => { b.on = false; }); NEAR.forEach(t => t.bulbs.forEach(b => { b.on = false; }));
+    sol.x = TREE_X - 30; sol.cheer = false; player.cheer = false; bambi.cheer = false;
     sol.visible = true; bambi.visible = false; player.x = 30; S.cam = player.x - LW * 0.34;
   }
 }
@@ -885,7 +892,7 @@ async function encounter(i) {
   await wait(type === 'elf' ? 1000 : 1000);
   let px = e.x;
   if (type === 'elf') {
-    await say('장난꾸러기 버섯', '치… 파티 재밌게 놀아…');
+    await say('꼬마 트리', '치… 파티 재밌게 놀아…');
     puff(e.x, GY - 11, 16); burstTwinkle(e.x, GY - 11, 14, 50, ['#ffd76a', '#5cff9a', '#ffffff']); ring(e.x, GY - 11, 2, 18, 0.35, ['#fff', '#b9b3ff']);
     px = e.x; e.alpha = 0; e.dizzy = false; await wait(500);
   }
@@ -964,7 +971,7 @@ async function ending() {
   tween(2.2, p => { S.amb = AMB[3] + (0.14 - AMB[3]) * p; }, easeIO);
   for (const t of NEAR) t.bulbs.forEach(b => { if (!b.on) { b.on = true; b.at = S.T + rand(0, 0.6); } });
   for (let k = 0; k < 7; k++) setTimeout(() => firework(TREE_X + rand(-56, 56), rand(16, GY - 90)), 300 + k * 420);
-  goldSnow(); sol.cheer = true; bambi.cheer = true; player.cheer = true; spawnGuests(false);
+  goldSnow(); sol.cheer = true; bambi.cheer = true; player.cheer = true; spawnParty(false);
   await wait(1600);
   await say('솔 & 밤비', '메리 크리스마스!\n파티에서 만나!');
   try { localStorage.setItem('solbam_done', '1'); } catch (e) {}
@@ -973,9 +980,14 @@ async function ending() {
   S.mode = 'tap'; await Promise.race([waitTap(), wait(4500)]); S.tapRes = null;
   mer.classList.add('hide'); showCard();
 }
-function spawnGuests(instant) {
-  const xs = [-50, -42, -16, 16, 44, 52, -58, 60];
-  GUESTS = GUESTF.map((c, i) => ({ c, x: TREE_X + xs[i], at: instant ? 0 : S.T + 0.25 * i, seed: rand(0, 6), shown: instant }));
+function spawnParty(instant) {
+  S.party = true; PF = CH.player;
+  // Six named cast members only, all within the narrow mobile viewport.
+  S.camLock = TREE_X - LW / 2; if (instant) S.cam = S.camLock;
+  Object.assign(sol, { x: TREE_X - 10, visible: true, cheer: true });
+  Object.assign(player, { x: TREE_X + 10, visible: true, moving: false, atk: null, lunge: 0, cheer: true });
+  Object.assign(bambi, { x: TREE_X + 30, visible: true, moving: false, guide: false, oy: 0, cheer: true });
+  GUESTS = [EN.fuzz, EN.slime, EN.mush].map((c, i) => ({ c, x: TREE_X + [-48, -30, 48][i], at: instant ? 0 : S.T + 0.25 * i, seed: i * 2.1, shown: instant }));
 }
 function firework(x, y) {
   const col = pick([['#ffffff', '#ff6b7a', '#e8344a'], ['#ffffff', '#5cff9a', '#2f9a5a'], ['#ffffff', '#ffe08a', '#f0a93a'], ['#ffffff', '#9ad1ff', '#6ab8ff']]);
@@ -991,12 +1003,11 @@ function showCard() {
   $('#cIntro').textContent = CONFIG.intro; $('#cWhen').innerHTML = CONFIG.when; $('#cWhere').innerHTML = CONFIG.where;
   $('#cPot').textContent = CONFIG.potluck || '포트럭 안내는 곧 알려드릴게요!';
   if (CONFIG.rsvpUrl) $('#bRsvp').classList.remove('hide');
-  const pc = $('#portrait'); pc.width = 240; pc.height = 120; const g = pc.getContext('2d'); g.setTransform(3, 0, 0, 3, 0, 0); g.imageSmoothingEnabled = false; g.clearRect(0, 0, pc.width, pc.height);
+  const pc = $('#portrait'); pc.width = 360; pc.height = 150; const g = pc.getContext('2d'); g.setTransform(3, 0, 0, 3, 0, 0); g.imageSmoothingEnabled = false; g.clearRect(0, 0, pc.width, pc.height);
   const t = TREE_IMG['trees/pico_green'] ? treeFromImg(TREE_IMG['trees/pico_green']) : genTree({ type: 'pine', h: 30, w: 26, seed: 7, pal: TPAL[0], snowy: true });
-  g.drawImage(t.cv, 40 - t.ax, 37 - t.h + 2); g.drawImage(STAR, 35, 0);
-  g.fillStyle = '#c4e2f6'; g.fillRect(0, 37, 80, 3); g.fillStyle = '#ffffff'; g.fillRect(0, 37, 80, 1);
-  [CH.sol.cheer, CH.player.cheer, CH.bambi.cheer].forEach((sp, i) => g.drawImage(sp.hires || sp, 15 + i * 25 - sp.width / 2, 38 - sp.height, sp.width, sp.height));
-  [GUESTF[0], GUESTF[3]].forEach((c, k) => c && g.drawImage(c, k ? 66 : -4, 38 - c.height));
+  g.drawImage(t.cv, 60 - t.ax, 47 - t.h + 2); g.drawImage(STAR, 55, 0);
+  g.fillStyle = '#c4e2f6'; g.fillRect(0, 47, 120, 3); g.fillStyle = '#ffffff'; g.fillRect(0, 47, 120, 1);
+  [EN.fuzz, EN.slime, CH.sol.cheer, CH.player.cheer, CH.bambi.cheer, EN.mush].forEach((sp, i) => g.drawImage(sp.hires || sp, 10 + i * 20 - sp.width / 2, 48 - sp.height, sp.width, sp.height));
   const c = $('#card'); c.classList.remove('hide'); const pp = c.querySelector('.letter'); pp.classList.remove('pop'); void pp.offsetWidth; pp.classList.add('pop'); c.scrollTop = 0;
 }
 function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.add('on'); setTimeout(() => el.classList.remove('on'), 1600); }
