@@ -355,9 +355,28 @@ function flareAt(x, y, L, core, arm) {
   const d = R(L * 0.4); for (let i = 1; i <= d; i++) { ctx.fillRect(x + i, y + i, 1, 1); ctx.fillRect(x - i, y - i, 1, 1); ctx.fillRect(x + i, y - i, 1, 1); ctx.fillRect(x - i, y + i, 1, 1); }
   ctx.fillStyle = core || '#fff'; const c = Math.max(1, R(L * 0.6)); ctx.fillRect(x - c, y, c * 2 + 1, 1); ctx.fillRect(x, y - c, 1, c * 2 + 1); if (L > 5) ctx.fillRect(x - 1, y - 1, 3, 3);
 }
-function twinkleBeat(time, seed) {
-  const phase = (time + seed * .37) % 1.35;
-  return phase < .075 || (phase >= .18 && phase < .245);
+// Hand-stepped glint: point, diamond, four rays, then detached tips.
+function drawTreeGlint(x, y, time, seed, color, large = false) {
+  const phase = (time + seed * .37) % 1.6;
+  const frame = Math.floor(phase / .08);
+  if (frame >= 7) return;
+  const rays = [[0,-1], [1,0], [0,1], [-1,0]];
+  const peak = large ? 5 : 3;
+  if (frame <= 3) {
+    const length = [0, 1, peak, peak][frame];
+    for (const [dx,dy] of rays) {
+      for (let i=1; i<=length; i++) pxl(x+dx*i,y+dy*i,i===length ? color : '#fff1c4');
+    }
+    if (frame===2) {
+      for(const dx of [-1,1]) for(const dy of [-1,1]) pxl(x+dx,y+dy,color);
+    }
+    pxl(x,y,frame===0 ? '#ffe4aa' : '#ffffff');
+  } else {
+    ctx.save();
+    ctx.globalAlpha = [ .85, .52, .23 ][frame-4];
+    for(const [dx,dy] of rays) pxl(x+dx*(peak+1), y+dy*(peak+1), '#ffe8bf');
+    ctx.restore();
+  }
 }
 function sparkle(x, y, c, big) {
   x = R(x); y = R(y); ctx.fillStyle = c; ctx.fillRect(x, y, 1, 1);
@@ -757,28 +776,19 @@ function render() {
     const bulb = lit[i + 2], bx = lit[i], by = lit[i + 1];
     drawGlow(bx, by, 8, bulb.col, .42);
     pxl(bx, by, bulb.col);
-    if (twinkleBeat(T, bulb.seed)) {
-      sparkle(bx, by, bulb.col, 2);
-      pxl(bx, by, '#fffdf1');
-    }
+    drawTreeGlint(bx, by, T, bulb.seed, bulb.col);
   }
   if (bambi.visible) { drawGlow(noseX, noseY, 5, '#ff3344', 0.85 + 0.15 * Math.sin(T * 5)); }
   if (item && item.visible) { const bob = item.fly ? 0 : R(Math.sin(item.t * 4) * 1.5); drawGlow(item.x - cam, item.y + oy + bob, 13, '#ffcf6a', 0.8); if ((item.t * 6 | 0) % 3 === 0) sparkle(item.x - cam + 6, item.y - 5 + oy + bob, '#fff', 1); }
   if (BIG.star) {
     drawGlow(starX, starY, BIG.lit ? 24 : 13, '#ffcf6a', .9);
     if (BIG.lit) {
-      const phase = T % 1.35;
-      const age = phase >= .18 ? phase - .18 : phase;
-      // A short glint leads the softer amber spill. Only the light spreads.
-      if (age > .025 && age < .43) {
-        const progress = (age - .025) / .405;
-        const intensity = Math.min(1, progress * 6) * (1 - progress) ** 2;
-        drawGlow(starX, starY, 24, '#ffa94e', .58 * intensity);
+      const age = T % 1.6 - .16;
+      if (age >= 0 && age < .43) {
+        const progress = age / .43;
+        drawGlow(starX, starY, 24, '#ffa94e', .55 * Math.sin(Math.PI * progress));
       }
-    }
-    if (BIG.lit && twinkleBeat(T, 0)) {
-      sparkle(starX, starY - 1, '#fff8d7', 1);
-      pxl(starX, starY - 1, '#ffffff');
+      drawTreeGlint(starX, starY - 1, T, 0, '#ffc157', true);
     }
   }
   drawRays(cam, oy);
