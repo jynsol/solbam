@@ -773,12 +773,12 @@ function render() {
       if (age > .025 && age < .43) {
         const progress = (age - .025) / .405;
         const intensity = Math.min(1, progress * 6) * (1 - progress) ** 2;
-        drawGlow(starX, starY, 18 + R(16 * progress), '#ffa94e', .58 * intensity);
+        drawGlow(starX, starY, 24, '#ffa94e', .58 * intensity);
       }
     }
     if (BIG.lit && twinkleBeat(T, 0)) {
-      flareAt(starX, starY, 7, '#ffda72', '#efa936');
-      pxl(starX, starY, '#fffdf1');
+      sparkle(starX, starY - 1, '#fff8d7', 1);
+      pxl(starX, starY - 1, '#ffffff');
     }
   }
   drawRays(cam, oy);
