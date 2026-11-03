@@ -249,7 +249,7 @@ function makeBigTree() {
     const y = Math.floor(t * (p.h - 2)), [L, Rr] = p.rows[y] || [-1, -1]; if (L < 0 || Rr - L < 10) return;
     for (let j = 0; j < 2; j++) orn.push({ lx: irand(L + 4, Rr - 5) - p.ax, ly: y - p.h, col: pick(['#d8394a', '#d8394a', '#ffd25e', '#e8f4fc']) });
   });
-  return { ...p, bulbs: p.bulbs.map((b, j) => ({ ...b, col: WARM[j % WARM.length], on: false, at: 0, seed: rand(0, 6.28) })), orn, top: -p.h + 1 };
+  return { ...p, bulbs: p.bulbs.map((b, j) => ({ ...b, twinkles: true, col: WARM[j % WARM.length], on: false, at: 0, seed: rand(0, 6.28) })), orn, top: -p.h + 1 };
 }
 
 /* ---------- 상태 ---------- */
@@ -776,7 +776,7 @@ function render() {
     const bulb = lit[i + 2], bx = lit[i], by = lit[i + 1];
     drawGlow(bx, by, 8, bulb.col, .42);
     pxl(bx, by, bulb.col);
-    drawTreeGlint(bx, by, T, bulb.seed, bulb.col);
+    if (bulb.twinkles) drawTreeGlint(bx, by, T, bulb.seed, bulb.col);
   }
   if (bambi.visible) { drawGlow(noseX, noseY, 5, '#ff3344', 0.85 + 0.15 * Math.sin(T * 5)); }
   if (item && item.visible) { const bob = item.fly ? 0 : R(Math.sin(item.t * 4) * 1.5); drawGlow(item.x - cam, item.y + oy + bob, 13, '#ffcf6a', 0.8); if ((item.t * 6 | 0) % 3 === 0) sparkle(item.x - cam + 6, item.y - 5 + oy + bob, '#fff', 1); }
@@ -1105,18 +1105,10 @@ async function lightUp(i) {
     return;
   }
   const a0 = S.amb, a1 = AMB[i + 1]; tween(1.8, p => { S.amb = a0 + (a1 - a0) * p; }, easeIO);
-  ring(player.x, GY - 12, 3, 100, 1.8, ['#fff6ce', '#ffd76a']);
-  burstTwinkle(player.x, GY - 18, 22, 45, ['#ffd76a', '#fff6ce', '#ef8a92']);
   for (const t of NEAR) {
     if (t.x > LIT_LIMIT[i]) continue;
-    if (Math.abs(t.x - player.x) < 95) {
-      const tx=t.x,ty=GY-t.pine.h*.65;
-      for(let k=0;k<3;k++)part({k:'conv',x:player.x,y:GY-18,x0:player.x,y0:GY-18,tx:tx+k*3-3,ty:ty-k*5,cx:12,cy:-18,life:1.1+k*.15,cols:['#fff0b1'],emit:true});
-      vlight(tx,ty,25,.65,2.3);
-    }
     t.bulbs.forEach((b, j) => { if (!b.on) { b.on = true; b.at = S.T + Math.abs(t.x - player.x) * 0.004 + j * 0.04; } });
   }
-  for (let k = 0; k < 24 + i * 8; k++) part({ k: 'twinkle', x: S.cam + rand(0, LW), y: GY - rand(15, 95), vx: rand(-3, 3), vy: -rand(3, 9), life: rand(1.4, 2.4), cols: [pick(['#ffd76a', '#fff6ce', '#ee9bad'])], emit: true, delay: k * 0.04 });
   await wait(2200);
 }
 async function solVoice() {
