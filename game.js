@@ -361,11 +361,19 @@ function drawTreeGlint(x, y, time, seed, color, large = false) {
   const frame = Math.floor(phase / .08);
   if (frame >= 7) return;
   const rays = [[0,-1], [1,0], [0,1], [-1,0]];
-  const peak = large ? 5 : 3;
+  const peak = large ? 9 : 3;
   if (frame <= 3) {
     const length = [0, 1, peak, peak][frame];
     for (const [dx,dy] of rays) {
-      for (let i=1; i<=length; i++) pxl(x+dx*i,y+dy*i,i===length ? color : '#fff1c4');
+      for (let i=1; i<=length; i++) pxl(x+dx*i,y+dy*i,i===length ? color : large ? '#fffdf1' : '#fff1c4');
+    }
+    if (large && (frame === 2 || frame === 3)) {
+      // Luminous diamond inside the topper; slim ivory tips beyond its gold outline.
+      for (let dy = -2; dy <= 2; dy++) {
+        const halfWidth = 2 - Math.abs(dy);
+        ctx.fillStyle = dy === 0 ? '#ffffff' : '#fff9df';
+        ctx.fillRect(R(x) - halfWidth, R(y) + dy, halfWidth * 2 + 1, 1);
+      }
     }
     if (frame===2) {
       for(const dx of [-1,1]) for(const dy of [-1,1]) pxl(x+dx,y+dy,color);
